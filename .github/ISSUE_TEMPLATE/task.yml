@@ -1,0 +1,31 @@
+name: Engineering task
+description: Track a technical task
+title: "chore(infra): "
+labels: ["type:task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal and context
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "Given ... When ... Then ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Story points
+      options: ["1", "2", "3", "5"]
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner and reviewer
+    validations:
+      required: true

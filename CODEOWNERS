@@ -1,0 +1,8 @@
+# Replace the placeholder handles before enabling “Require review from Code Owners”.
+# GitHub ignores comment-only lines. Until real handles are added, normal PR review
+# rotation remains the source of truth.
+#
+# Suggested format:
+# /frontend/ @padoruqm @DUY_GITHUB_USERNAME
+# /backend/  @padoruqm @PHUC_GITHUB_USERNAME
+# /scripts/  @padoruqm @DUY_GITHUB_USERNAME @PHUC_GITHUB_USERNAME

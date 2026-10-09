@@ -1,0 +1,40 @@
+name: User story
+description: Track a user-visible capability
+title: "feat(scope): "
+labels: ["type:story"]
+body:
+  - type: markdown
+    attributes:
+      value: "Use English for the title. Keep the issue no larger than 5 story points and two working days."
+  - type: textarea
+    id: story
+    attributes:
+      label: User story
+      placeholder: "As a ..., I want ..., so that ..."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "Given ... When ... Then ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Story points
+      options: ["1", "2", "3", "5"]
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner and reviewer
+      placeholder: "Owner: @...; Reviewer: @..."
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and risks

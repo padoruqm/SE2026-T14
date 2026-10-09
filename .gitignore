@@ -1,0 +1,46 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node/Vite
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Runtime point-cloud data and generated viewer resources
+data/uploads/
+data/results/
+data/cache/
+data/tmp/
+*.las
+*.laz
+*.copc.laz
+potree-output/
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
