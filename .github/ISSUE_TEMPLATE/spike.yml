@@ -1,0 +1,30 @@
+name: Technical spike
+description: Time-boxed investigation to reduce uncertainty
+title: "chore(scope): investigate "
+labels: ["type:spike"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question and decision affected
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Timebox and experiment
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected evidence and decision
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Story points
+      options: ["1", "2", "3", "5"]
+    validations:
+      required: true

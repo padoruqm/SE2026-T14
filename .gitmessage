@@ -1,0 +1,11 @@
+# <type>(<scope>): <imperative subject, max 72 characters>
+#
+# Why this change is needed (optional for trivial changes).
+#
+# Closes #<issue-number>
+# or
+# Refs #<issue-number>
+#
+# Allowed types: feat, fix, docs, refactor, test, chore, build, ci, perf
+# Allowed scopes: upload, viewer, measure, crop, filter, export, api, jobs,
+# processing, storage, infra, docs, deps

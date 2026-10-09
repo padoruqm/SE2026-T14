@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible defect
+title: "fix(scope): "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment, data and logs
+      description: Never attach secrets or sensitive point-cloud data.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [blocker, critical, major, minor]
+    validations:
+      required: true
