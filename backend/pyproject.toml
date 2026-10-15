@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "point-cloud-explorer-backend"
+version = "0.1.0"
+description = "Backend API for the Point Cloud Explorer MVP"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+]
+
+[project.optional-dependencies]
+dev = ["httpx>=0.27,<1.0"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
