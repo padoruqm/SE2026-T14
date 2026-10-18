@@ -1,0 +1,84 @@
+name: Project board
+
+# Done        = issue closed by a PR merged into dev
+# In product  = every Done issue once dev is merged into main
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+  PROJECT_ID: PVT_kwHOCrKVN84BnjHQ
+  STATUS_FIELD_ID: PVTSSF_lAHOCrKVN84BnjHQzhmHNtc
+  DONE_OPTION_ID: "98236657"
+  IN_PRODUCT_OPTION_ID: eaa8d49f
+
+jobs:
+  move-cards:
+    name: Move project cards
+    if: >-
+      github.event.pull_request.merged == true &&
+      (github.event.pull_request.base.ref == 'dev' ||
+       github.event.pull_request.head.ref == 'dev')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set status
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          set_status() {
+            gh api graphql -f query='
+              mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $project, itemId: $item, fieldId: $field,
+                  value: {singleSelectOptionId: $option}
+                }) { projectV2Item { id } }
+              }' -f project="$PROJECT_ID" -f item="$1" -f field="$STATUS_FIELD_ID" -f option="$2" > /dev/null
+          }
+
+          if [ "$BASE_REF" = "dev" ]; then
+            owner="${REPO%/*}"; name="${REPO#*/}"
+            # Cards of issues closed by this PR -> Done
+            gh api graphql -f query='
+              query($owner: String!, $name: String!, $pr: Int!) {
+                repository(owner: $owner, name: $name) {
+                  pullRequest(number: $pr) {
+                    closingIssuesReferences(first: 50) {
+                      nodes { projectItems(first: 20) { nodes { id project { id } } } }
+                    }
+                  }
+                }
+              }' -f owner="$owner" -f name="$name" -F pr="$PR_NUMBER" \
+              --jq ".data.repository.pullRequest.closingIssuesReferences.nodes[].projectItems.nodes[] | select(.project.id == \"$PROJECT_ID\") | .id" |
+              while read -r item; do set_status "$item" "$DONE_OPTION_ID"; done
+          else
+            # dev merged into main: every Done issue card -> In product
+            gh api graphql --paginate -f query='
+              query($project: ID!, $endCursor: String) {
+                node(id: $project) {
+                  ... on ProjectV2 {
+                    items(first: 100, after: $endCursor) {
+                      pageInfo { hasNextPage endCursor }
+                      nodes {
+                        id
+                        content { __typename }
+                        status: fieldValueByName(name: "Status") {
+                          ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                        }
+                      }
+                    }
+                  }
+                }
+              }' -f project="$PROJECT_ID" \
+              --jq ".data.node.items.nodes[] | select(.content.__typename == \"Issue\" and .status.optionId == \"$DONE_OPTION_ID\") | .id" |
+              while read -r item; do set_status "$item" "$IN_PRODUCT_OPTION_ID"; done
+          fi
