@@ -21,7 +21,10 @@ env:
 jobs:
   move-cards:
     name: Move project cards
-    if: github.event.pull_request.merged == true
+    if: >-
+      github.event.pull_request.merged == true &&
+      (github.event.pull_request.base.ref == 'dev' ||
+       github.event.pull_request.head.ref == 'dev')
     runs-on: ubuntu-latest
     steps:
       - name: Set status
