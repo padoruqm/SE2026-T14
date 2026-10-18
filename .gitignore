@@ -50,3 +50,6 @@ temp/
 # Local docs and workspace files
 docs/
 *.code-workspace
+
+# Local agent instructions
+AGENTS.md
