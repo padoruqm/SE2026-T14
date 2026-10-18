@@ -1,8 +1,4 @@
-# Replace the placeholder handles before enabling “Require review from Code Owners”.
-# GitHub ignores comment-only lines. Until real handles are added, normal PR review
-# rotation remains the source of truth.
-#
-# Suggested format:
-# /frontend/ @padoruqm @DUY_GITHUB_USERNAME
-# /backend/  @padoruqm @PHUC_GITHUB_USERNAME
-# /scripts/  @padoruqm @DUY_GITHUB_USERNAME @PHUC_GITHUB_USERNAME
+# Every PR automatically requests (and notifies) all owners; GitHub skips the PR author,
+# so Quang's PRs go to Duy and Phúc, and Duy's/Phúc's PRs go to Quang plus the other peer.
+# Quang = padoruqm, Duy = yuk068, Phúc = jacobor88.
+* @padoruqm @yuk068 @jacobor88
