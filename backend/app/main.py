@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.api.datasets import router as datasets_router
 from app.core.config import Settings
+from app.core.errors import register_error_handlers
 from app.storage.local import LocalDatasetStorage
 
 
@@ -14,6 +15,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         root=resolved_settings.storage_root,
         max_upload_bytes=resolved_settings.max_upload_bytes,
     )
+    register_error_handlers(app)
     app.include_router(datasets_router)
 
     @app.get("/health")

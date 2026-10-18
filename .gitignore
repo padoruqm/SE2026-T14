@@ -11,6 +11,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+*.egg-info/
 .coverage
 htmlcov/
 .venv/
@@ -22,6 +23,7 @@ dist/
 coverage/
 .vite/
 *.tsbuildinfo
+.eslintcache
 
 # Editors and OS
 .DS_Store
