@@ -1,60 +1,62 @@
 from __future__ import annotations
 
-from pathlib import Path
-from uuid import uuid4
+from collections.abc import AsyncIterator
+from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, File, Request, UploadFile, status
 from pydantic import BaseModel
 
-from app.storage.local import UploadTooLargeError
+from app.core.errors import ErrorResponse, UnsupportedFileTypeError
+from app.services.datasets import DatasetService
+
+router = APIRouter(prefix="/api")
+
+READ_CHUNK_BYTES = 1024 * 1024
 
 
-router = APIRouter(prefix="/api/v1")
+class PointCloudMetadata(BaseModel):
+    pointCount: int | None = None
+    bounds: dict[str, float] | None = None
+    crs: str | None = None
 
 
-class DatasetUploadResponse(BaseModel):
+class PointCloudResponse(BaseModel):
     id: str
-    original_filename: str
-    size_bytes: int
+    filename: str
     status: str
+    metadata: PointCloudMetadata
+
+
+async def _read_chunks(upload: UploadFile) -> AsyncIterator[bytes]:
+    while chunk := await upload.read(READ_CHUNK_BYTES):
+        yield chunk
+
+
+_UPLOAD_ERRORS: dict[int | str, dict[str, Any]] = {
+    413: {"model": ErrorResponse, "description": "File exceeds the upload limit"},
+    415: {"model": ErrorResponse, "description": "File extension is not .las or .laz"},
+    422: {"model": ErrorResponse, "description": "Invalid request or point cloud"},
+}
 
 
 @router.post(
-    "/datasets",
-    response_model=DatasetUploadResponse,
-    status_code=status.HTTP_202_ACCEPTED,
+    "/upload",
+    response_model=PointCloudResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=_UPLOAD_ERRORS,
 )
-async def upload_dataset(
+async def upload_point_cloud(
     request: Request,
-    x_filename: str = Header(
-        ...,
-        description="Original LAS/LAZ filename; request body contains the raw file bytes.",
-    ),
-) -> DatasetUploadResponse:
-    safe_filename = Path(x_filename).name
-    suffix = Path(safe_filename).suffix.lower()
-    if suffix not in {".las", ".laz"}:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only .las and .laz files are supported.",
-        )
+    file: UploadFile = File(description="LAS/LAZ point cloud file"),
+) -> PointCloudResponse:
+    if not file.filename:
+        raise UnsupportedFileTypeError()
 
-    dataset_id = str(uuid4())
-    try:
-        _, size_bytes = await request.app.state.storage.save(
-            dataset_id,
-            suffix,
-            request.stream(),
-        )
-    except UploadTooLargeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail="The uploaded file exceeds APP_MAX_UPLOAD_BYTES.",
-        ) from exc
-
-    return DatasetUploadResponse(
-        id=dataset_id,
-        original_filename=safe_filename,
-        size_bytes=size_bytes,
-        status="uploaded",
+    service = DatasetService(request.app.state.storage)
+    stored = await service.store_upload(file.filename, _read_chunks(file))
+    return PointCloudResponse(
+        id=stored.id,
+        filename=stored.filename,
+        status=stored.status,
+        metadata=PointCloudMetadata(),
     )
