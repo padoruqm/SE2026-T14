@@ -44,3 +44,7 @@ potree-output/
 *.log
 tmp/
 temp/
+
+# Local docs and workspace files
+docs/
+*.code-workspace
