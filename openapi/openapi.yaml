@@ -1,0 +1,445 @@
+openapi: 3.1.0
+info:
+  title: Point Cloud Explorer API
+  version: 0.1.0
+  description: |
+    Contract for the upload, metadata and job endpoints of the MVP.
+    This file is the source of truth: the mock server and the generated
+    frontend client are both produced from it.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local backend
+  - url: http://127.0.0.1:4010
+    description: Local mock server (`npm run mock`)
+security: []
+tags:
+  - name: upload
+    description: Receive LAS/LAZ files
+  - name: pointcloud
+    description: Point cloud resources, metadata and conversion
+  - name: jobs
+    description: Long-running processing jobs
+
+paths:
+  /api/upload:
+    post:
+      tags: [upload]
+      operationId: uploadPointCloud
+      summary: Upload a LAS/LAZ point cloud
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  contentEncoding: base64
+                  contentMediaType: application/octet-stream
+                  description: LAS/LAZ point cloud file
+      responses:
+        "201":
+          description: File stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCloud"
+              example:
+                id: pc_8f3a1c
+                filename: survey.laz
+                status: uploaded
+                metadata:
+                  pointCount: null
+                  bounds: null
+                  crs: null
+        "413":
+          $ref: "#/components/responses/FileTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedFileType"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/pointcloud/{id}:
+    get:
+      tags: [pointcloud]
+      operationId: getPointCloud
+      summary: Get a point cloud with its metadata and viewer URL
+      parameters:
+        - $ref: "#/components/parameters/PointCloudId"
+      responses:
+        "200":
+          description: Point cloud resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointCloudDetail"
+              example:
+                id: pc_8f3a1c
+                filename: survey.laz
+                status: ready
+                metadata:
+                  pointCount: 1250000
+                  bounds:
+                    minX: 100.0
+                    minY: 200.0
+                    minZ: 0.0
+                    maxX: 180.5
+                    maxY: 260.25
+                    maxZ: 42.7
+                  crs: EPSG:32648
+                viewerUrl: /api/pointcloud/pc_8f3a1c/viewer/metadata.json
+                sourceId: null
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/pointcloud/{id}/convert:
+    post:
+      tags: [pointcloud]
+      operationId: convertPointCloud
+      summary: Start the viewer conversion job for a point cloud
+      parameters:
+        - $ref: "#/components/parameters/PointCloudId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertRequest"
+            example:
+              force: false
+      responses:
+        "202":
+          description: Conversion job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              example:
+                id: job_21b7d0
+                type: convert
+                state: queued
+                progress: null
+                resultId: null
+                error: null
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/job/{id}:
+    get:
+      tags: [jobs]
+      operationId: getJob
+      summary: Get the state of a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Opaque job ID
+          schema:
+            type: string
+          example: job_21b7d0
+      responses:
+        "200":
+          description: Job resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                running:
+                  summary: Job in progress
+                  value:
+                    id: job_21b7d0
+                    type: convert
+                    state: running
+                    progress: 40
+                    resultId: null
+                    error: null
+                succeeded:
+                  summary: Job finished
+                  value:
+                    id: job_21b7d0
+                    type: convert
+                    state: succeeded
+                    progress: 100
+                    resultId: pc_8f3a1c
+                    error: null
+                failed:
+                  summary: Job failed
+                  value:
+                    id: job_21b7d0
+                    type: convert
+                    state: failed
+                    progress: null
+                    resultId: null
+                    error:
+                      code: INVALID_POINT_CLOUD
+                      message: The uploaded file is not a supported point cloud
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  parameters:
+    PointCloudId:
+      name: id
+      in: path
+      required: true
+      description: Opaque point cloud ID
+      schema:
+        type: string
+      example: pc_8f3a1c
+
+  schemas:
+    PointCloud:
+      type: object
+      required: [id, filename, status, metadata]
+      properties:
+        id:
+          type: string
+          description: Opaque ID; clients must not derive paths from it
+        filename:
+          type: string
+        status:
+          $ref: "#/components/schemas/PointCloudStatus"
+        metadata:
+          $ref: "#/components/schemas/PointCloudMetadata"
+
+    PointCloudDetail:
+      allOf:
+        - $ref: "#/components/schemas/PointCloud"
+        - type: object
+          properties:
+            viewerUrl:
+              type: [string, "null"]
+              description: Set only when the viewer resources are ready
+            sourceId:
+              type: [string, "null"]
+              description: ID of the point cloud this one was derived from
+
+    PointCloudStatus:
+      type: string
+      enum: [uploaded, converting, ready, failed]
+
+    PointCloudMetadata:
+      type: object
+      required: [pointCount, bounds, crs]
+      properties:
+        pointCount:
+          type: [integer, "null"]
+          minimum: 0
+        bounds:
+          oneOf:
+            - $ref: "#/components/schemas/Bounds"
+            - type: "null"
+        crs:
+          type: [string, "null"]
+          description: Coordinate reference system, for example EPSG:32648
+
+    Bounds:
+      type: object
+      required: [minX, minY, minZ, maxX, maxY, maxZ]
+      properties:
+        minX: { type: number }
+        minY: { type: number }
+        minZ: { type: number }
+        maxX: { type: number }
+        maxY: { type: number }
+        maxZ: { type: number }
+
+    ConvertRequest:
+      type: object
+      properties:
+        force:
+          type: boolean
+          default: false
+          description: Re-run the conversion even if a result already exists
+
+    Job:
+      type: object
+      required: [id, type, state, progress, resultId, error]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [convert, crop, filter]
+        state:
+          $ref: "#/components/schemas/JobState"
+        progress:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+          description: Null when the processor cannot measure progress
+        resultId:
+          type: [string, "null"]
+        error:
+          oneOf:
+            - $ref: "#/components/schemas/JobError"
+            - type: "null"
+
+    JobState:
+      type: string
+      enum: [queued, running, succeeded, failed, cancelled]
+
+    JobError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+
+    ErrorCode:
+      type: string
+      enum:
+        - BAD_REQUEST
+        - VALIDATION_ERROR
+        - FILE_TOO_LARGE
+        - UNSUPPORTED_FILE_TYPE
+        - INVALID_POINT_CLOUD
+        - NOT_FOUND
+        - METHOD_NOT_ALLOWED
+        - CONFLICT
+        - INTERNAL_ERROR
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, details]
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+            requestId:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+  headers:
+    RequestId:
+      description: Same value as `error.requestId`
+      schema:
+        type: string
+
+  responses:
+    FileTooLarge:
+      description: The file exceeds the upload limit
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: FILE_TOO_LARGE
+              message: The uploaded file exceeds the maximum upload size
+              requestId: req_4c1d9e
+              details: {}
+    UnsupportedFileType:
+      description: The file extension is not .las or .laz
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: UNSUPPORTED_FILE_TYPE
+              message: Only .las and .laz files are supported
+              requestId: req_4c1d9e
+              details: {}
+    Unprocessable:
+      description: The request or the point cloud data is invalid
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalidPointCloud:
+              value:
+                error:
+                  code: INVALID_POINT_CLOUD
+                  message: The uploaded file is not a supported point cloud
+                  requestId: req_4c1d9e
+                  details: {}
+            validation:
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The request is invalid
+                  requestId: req_4c1d9e
+                  details:
+                    fields:
+                      - location: [body, file]
+                        reason: Field required
+    NotFound:
+      description: The resource does not exist
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: NOT_FOUND
+              message: Not Found
+              requestId: req_4c1d9e
+              details: {}
+    Conflict:
+      description: The resource is not in a state that allows this request
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: CONFLICT
+              message: Conversion has already run for this point cloud
+              requestId: req_4c1d9e
+              details: {}
+    InternalError:
+      description: Unexpected server error; internal details are never exposed
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+              requestId: req_4c1d9e
+              details: {}
