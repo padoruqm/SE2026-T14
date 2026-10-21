@@ -6,5 +6,6 @@
   },
   "categories": {
     "correctness": "error"
-  }
+  },
+  "ignorePatterns": ["src/api/generated/**"]
 }
