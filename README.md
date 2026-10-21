@@ -10,11 +10,11 @@ Web app xử lý point cloud LAS/LAZ cho đồ án Công nghệ phần mềm. MV
 - Processing: PDAL + PotreeConverter.
 - Runtime: Docker Compose; storage filesystem ở MVP.
 
-Việc tích hợp Potree/Vite, PDAL, PotreeConverter và LAZ vẫn phải được spike, không xem đây là cam kết về phiên bản công cụ.
+Việc tích hợp viewer Potree/Vite, PDAL và hỗ trợ LAZ vẫn cần spike; không xem đó là cam kết về khả năng hoặc phiên bản đã kiểm chứng.
 
 ## Trạng thái repository
 
-Backend có nền tảng nhỏ cho bước Upload: `POST /api/upload` nhận `multipart/form-data` chứa tệp LAS/LAZ và lưu bằng dataset ID. Frontend là Vue 3 shell có route upload và viewer rỗng. Conversion job và viewer sẽ được thêm sau khi spike kỹ thuật được duyệt.
+Backend có nền tảng upload và adapter xử lý LAS qua PotreeConverter. API conversion/job chưa được nối vào adapter; frontend vẫn là Vue 3 shell có route upload và viewer rỗng.
 
 ## Chạy bằng Docker Compose
 
@@ -26,7 +26,7 @@ docker compose up --build
 
 Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
 
-Compose hiện dựng frontend và backend của upload foundation. PDAL/PotreeConverter chưa được cài vào image: cách đóng gói và phiên bản cần được xác minh trong các spike xử lý tương ứng trước khi thêm vào runtime image.
+Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Test chuyển đổi LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ vẫn chờ spike #14.
 
 ## Chạy backend foundation
 
