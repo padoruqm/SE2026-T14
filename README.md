@@ -68,6 +68,18 @@ npm run build
 
 Đặt `VITE_API_BASE_URL` (xem `.env.example`) để trỏ tới backend; mặc định `http://127.0.0.1:8000`.
 
+## API contract và mock
+
+`openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
+
+```bash
+npm run mock          # mock server http://127.0.0.1:4010, trả về các example trong spec
+npm run lint:openapi  # kiểm tra spec hợp lệ
+npm run api:generate  # sinh lại client vào src/api/generated (không sửa tay)
+```
+
+Muốn xem response lỗi từ mock, gửi header `Prefer: code=404` (hoặc mã khác có trong spec). Đổi API thì sửa spec trước, chạy `api:generate` và commit cả file sinh ra; test backend sẽ báo lỗi nếu route upload lệch khỏi spec.
+
 ## Làm việc với Git
 
 1. Tạo issue có acceptance criteria và estimate.
@@ -82,6 +94,7 @@ Tài liệu lập kế hoạch nội bộ được lưu ngoài repository, khôn
 ```text
 frontend/     Vue 3 + TypeScript + Vite shell
 backend/      FastAPI upload foundation
+openapi/      OpenAPI contract (nguồn sự thật cho mock và client)
 data/sample/  Chỉ dữ liệu mẫu nhỏ, đã được phép phân phối
 scripts/      Validation, bootstrap và automation an toàn
 .github/      Template và CI policy
