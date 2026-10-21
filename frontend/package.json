@@ -8,6 +8,7 @@
     "build": "run-p typecheck \"build-only {@}\" --",
     "build-only": "vite build",
     "preview": "vite preview",
+    "api:generate": "openapi-ts",
     "mock": "prism mock ../openapi/openapi.yaml --port 4010 --cors",
     "typecheck": "vue-tsc --build",
     "test": "vitest run",
@@ -23,6 +24,7 @@
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
     "@redocly/cli": "^2.66.0",
     "@stoplight/prism-cli": "^5.16.0",
     "@tsconfig/node24": "^24.0.5",
