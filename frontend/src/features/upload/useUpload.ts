@@ -1,8 +1,22 @@
 import { onScopeDispose, ref } from 'vue'
 
-import { UploadError, uploadPointCloud, type PointCloud } from './uploadApi'
+import type { PointCloud } from '@/api/generated/types.gen'
+import {
+  getJob,
+  PointCloudRequestError,
+  startConversion,
+  uploadPointCloud,
+  waitForNextJobPoll,
+} from './uploadApi'
 
-export type UploadStatus = 'idle' | 'uploading' | 'success' | 'error'
+export type UploadStatus =
+  | 'idle'
+  | 'uploading'
+  | 'queued'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'error'
 
 export function useUpload() {
   const status = ref<UploadStatus>('idle')
@@ -23,15 +37,36 @@ export function useUpload() {
     const current = new AbortController()
     controller = current
     status.value = 'uploading'
+    let conversionStarted = false
 
     try {
       result.value = await uploadPointCloud(file, current.signal)
-      status.value = 'success'
+      conversionStarted = true
+      let job = await startConversion(result.value.id, current.signal)
+
+      while (job.state === 'queued' || job.state === 'running') {
+        status.value = job.state
+        await waitForNextJobPoll(current.signal)
+        job = await getJob(job.id, current.signal)
+      }
+
+      if (job.state !== 'succeeded') {
+        throw new PointCloudRequestError(
+          job.error?.message ??
+            (job.state === 'cancelled'
+              ? 'Conversion was cancelled.'
+              : 'Conversion failed. Please try again.'),
+        )
+      }
+
+      status.value = 'done'
     } catch (caught) {
       if (current.signal.aborted) return
-      status.value = 'error'
+      status.value = conversionStarted ? 'failed' : 'error'
       error.value =
-        caught instanceof UploadError ? caught.message : 'Upload failed. Please try again.'
+        caught instanceof PointCloudRequestError
+          ? caught.message
+          : 'Conversion failed. Please try again.'
     }
   }
 

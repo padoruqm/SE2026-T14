@@ -12,7 +12,23 @@ function jsonResponse(status: number, body: unknown) {
   })
 }
 
-const uploaded = { id: 'pc_1', filename: 'scan.las', status: 'uploaded', metadata: {} }
+const uploaded = {
+  id: 'pc_1',
+  filename: 'scan.las',
+  status: 'uploaded',
+  metadata: { pointCount: null, bounds: null, crs: null },
+}
+
+function job(state: string, error: unknown = null) {
+  return {
+    id: 'job_1',
+    type: 'convert',
+    state,
+    progress: null,
+    resultId: state === 'succeeded' ? 'pc_1' : null,
+    error,
+  }
+}
 
 async function selectFile(wrapper: ReturnType<typeof mount>, name: string) {
   const input = wrapper.get('input[type="file"]')
@@ -32,6 +48,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -57,14 +74,29 @@ describe('UploadForm', () => {
     expect(button.attributes('disabled')).toBeDefined()
   })
 
-  it('shows the uploaded point cloud on success', async () => {
-    fetchMock.mockResolvedValue(jsonResponse(201, uploaded))
+  it('shows queued, running, and completed conversion states', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockResolvedValueOnce(jsonResponse(201, uploaded))
+    fetchMock.mockResolvedValueOnce(jsonResponse(202, job('queued')))
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, job('running')))
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, job('succeeded')))
     const wrapper = await mountWithFile()
 
     await wrapper.get('form').trigger('submit')
     await flushPromises()
+    expect(wrapper.get('[role="status"]').text()).toBe('Conversion queued…')
 
-    expect(wrapper.text()).toContain('Uploaded scan.las (ID: pc_1, status: uploaded)')
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+    expect(wrapper.get('[role="status"]').text()).toBe('Conversion in progress…')
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+
+    expect(wrapper.get('[role="status"]').text()).toBe(
+      'Conversion complete for scan.las (ID: pc_1).',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
   it.each([
@@ -78,12 +110,28 @@ describe('UploadForm', () => {
     await flushPromises()
 
     expect(wrapper.get('[role="alert"]').text()).toBe(message)
-    expect(wrapper.find('button[type="button"]').text()).toBe('Try again')
+    expect(wrapper.get('button[type="button"]').text()).toBe('Try again')
+  })
+
+  it('shows conversion errors and allows retrying', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(201, uploaded))
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(202, job('failed', { code: 'INVALID_POINT_CLOUD', message: 'Conversion failed.' })),
+    )
+    const wrapper = await mountWithFile()
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('Conversion failed.')
+    expect(wrapper.get('[role="status"]').text()).toBe('Conversion failed.')
+    expect(wrapper.get('button[type="button"]').text()).toBe('Try again')
   })
 
   it('retries the same file after a network error without reloading', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     fetchMock.mockResolvedValueOnce(jsonResponse(201, uploaded))
+    fetchMock.mockResolvedValueOnce(jsonResponse(202, job('succeeded')))
     const wrapper = await mountWithFile()
 
     await wrapper.get('form').trigger('submit')
@@ -93,11 +141,11 @@ describe('UploadForm', () => {
     await wrapper.get('button[type="button"]').trigger('click')
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     const retriedBody = fetchMock.mock.calls[1]![1]!.body as FormData
     expect((retriedBody.get('file') as File).name).toBe('scan.las')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Uploaded scan.las')
+    expect(wrapper.text()).toContain('Conversion complete for scan.las')
   })
 
   it('aborts the upload when unmounted', async () => {
