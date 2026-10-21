@@ -11,10 +11,14 @@ servers:
     description: Local backend
   - url: http://127.0.0.1:4010
     description: Local mock server (`npm run mock`)
+security: []
 tags:
   - name: upload
+    description: Receive LAS/LAZ files
   - name: pointcloud
+    description: Point cloud resources, metadata and conversion
   - name: jobs
+    description: Long-running processing jobs
 
 paths:
   /api/upload:
