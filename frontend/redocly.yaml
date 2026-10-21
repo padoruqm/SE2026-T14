@@ -1,0 +1,6 @@
+extends:
+  - recommended
+rules:
+  # Local-only API: no license or public server URLs to declare.
+  info-license: off
+  no-server-example.com: off

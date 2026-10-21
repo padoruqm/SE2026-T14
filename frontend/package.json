@@ -8,11 +8,13 @@
     "build": "run-p typecheck \"build-only {@}\" --",
     "build-only": "vite build",
     "preview": "vite preview",
+    "mock": "prism mock ../openapi/openapi.yaml --port 4010 --cors",
     "typecheck": "vue-tsc --build",
     "test": "vitest run",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint .",
     "lint:eslint": "eslint . --cache",
+    "lint:openapi": "redocly lint ../openapi/openapi.yaml",
     "lint:fix": "oxlint . --fix && eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/"
   },
@@ -21,6 +23,8 @@
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
+    "@redocly/cli": "^2.66.0",
+    "@stoplight/prism-cli": "^5.16.0",
     "@tsconfig/node24": "^24.0.5",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^24.13.4",
