@@ -26,6 +26,12 @@ paths:
       tags: [upload]
       operationId: uploadPointCloud
       summary: Upload a LAS/LAZ point cloud
+      description: |
+        The file is streamed to storage under a server-generated name. The LAS
+        header is validated on the way: a bad signature, a truncated or
+        inconsistent header, an unsupported extension or an oversized file is
+        rejected and nothing is kept. `metadata` is read from the header;
+        `crs` is null when the file declares no EPSG code.
       requestBody:
         required: true
         content:
@@ -51,9 +57,15 @@ paths:
                 filename: survey.laz
                 status: uploaded
                 metadata:
-                  pointCount: null
-                  bounds: null
-                  crs: null
+                  pointCount: 1250000
+                  bounds:
+                    minX: 100.0
+                    minY: 200.0
+                    minZ: 0.0
+                    maxX: 180.5
+                    maxY: 260.25
+                    maxZ: 42.7
+                  crs: EPSG:32648
         "413":
           $ref: "#/components/responses/FileTooLarge"
         "415":
