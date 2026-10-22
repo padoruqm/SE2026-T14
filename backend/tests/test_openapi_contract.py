@@ -55,6 +55,10 @@ class OpenApiContractTest(unittest.TestCase):
             "PointCloudMetadata"
         ]
         self.assertEqual(_properties(contract_metadata), _properties(implemented_metadata))
+        self.assertEqual(
+            _properties(self.spec["components"]["schemas"]["Bounds"]),
+            _properties(self.implemented["components"]["schemas"]["Bounds"]),
+        )
 
     def test_error_envelope_matches_the_contract(self) -> None:
         contract = self.spec["components"]["schemas"]["ErrorResponse"]["properties"]
