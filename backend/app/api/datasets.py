@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import asdict
 from typing import Any
 
 from fastapi import APIRouter, File, Request, UploadFile, status
@@ -14,9 +15,18 @@ router = APIRouter(prefix="/api")
 READ_CHUNK_BYTES = 1024 * 1024
 
 
+class Bounds(BaseModel):
+    minX: float
+    minY: float
+    minZ: float
+    maxX: float
+    maxY: float
+    maxZ: float
+
+
 class PointCloudMetadata(BaseModel):
     pointCount: int | None = None
-    bounds: dict[str, float] | None = None
+    bounds: Bounds | None = None
     crs: str | None = None
 
 
@@ -58,5 +68,9 @@ async def upload_point_cloud(
         id=stored.id,
         filename=stored.filename,
         status=stored.status,
-        metadata=PointCloudMetadata(),
+        metadata=PointCloudMetadata(
+            pointCount=stored.metadata.point_count,
+            bounds=Bounds(**asdict(stored.metadata.bounds)),
+            crs=stored.metadata.crs,
+        ),
     )

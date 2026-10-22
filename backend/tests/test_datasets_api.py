@@ -8,9 +8,10 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
+from las_fixtures import Vlr, build_las, geotiff_key_directory
 
-LAS_BYTES = b"LASF" + b"\x00" * 4
-MAX_UPLOAD_BYTES = 16
+LAS_BYTES = build_las(point_count=2, min_xyz=(1.0, 2.0, 0.0), max_xyz=(3.0, 4.0, 5.0))
+MAX_UPLOAD_BYTES = 4096
 
 
 class UploadApiTest(unittest.TestCase):
@@ -50,8 +51,34 @@ class UploadApiTest(unittest.TestCase):
         self.assertEqual("sample.LAS", payload["filename"])
         self.assertEqual("uploaded", payload["status"])
         self.assertEqual(
-            {"pointCount": None, "bounds": None, "crs": None}, payload["metadata"]
+            {
+                "pointCount": 2,
+                "bounds": {
+                    "minX": 1.0,
+                    "minY": 2.0,
+                    "minZ": 0.0,
+                    "maxX": 3.0,
+                    "maxY": 4.0,
+                    "maxZ": 5.0,
+                },
+                "crs": None,
+            },
+            payload["metadata"],
         )
+
+    def test_upload_returns_the_crs_declared_in_the_header(self) -> None:
+        keys = geotiff_key_directory((3072, 32648))
+        las = build_las(vlrs=(Vlr("LASF_Projection", 34735, keys),))
+
+        response = self._upload("utm.laz", las)
+
+        self.assertEqual("EPSG:32648", response.json()["metadata"]["crs"])
+
+    def test_upload_stores_the_file_under_a_server_generated_name(self) -> None:
+        payload = self._upload("client-chosen.las", LAS_BYTES).json()
+
+        stored_names = [path.name for path in self.upload_root.iterdir()]
+        self.assertEqual([f"{payload['id']}.las"], stored_names)
 
     def test_upload_stores_file_bytes(self) -> None:
         self._upload("sample.las", LAS_BYTES)
@@ -79,6 +106,20 @@ class UploadApiTest(unittest.TestCase):
         response = self._upload("short.laz", b"LA")
 
         self._assert_error(response, 422, "INVALID_POINT_CLOUD")
+
+    def test_rejects_a_file_with_a_valid_signature_but_truncated_header(self) -> None:
+        response = self._upload("truncated.las", LAS_BYTES[:150])
+
+        self._assert_error(response, 422, "INVALID_POINT_CLOUD")
+        self.assertEqual([], list(self.upload_root.iterdir()))
+
+    def test_rejects_a_header_with_inverted_bounds(self) -> None:
+        las = build_las(min_xyz=(9.0, 0.0, 0.0), max_xyz=(1.0, 1.0, 1.0))
+
+        response = self._upload("bad.las", las)
+
+        self._assert_error(response, 422, "INVALID_POINT_CLOUD")
+        self.assertEqual([], list(self.upload_root.iterdir()))
 
     def test_rejects_empty_file(self) -> None:
         response = self._upload("empty.las", b"")
