@@ -80,6 +80,30 @@ npm run build
 
 Đặt `VITE_API_BASE_URL` (xem `.env.example`) để trỏ tới backend; mặc định `http://127.0.0.1:8000`.
 
+## Spike #6: Potree trong Vue/Vite
+
+**Kết luận: tiếp tục với Potree 1.8.2.** Adapter mount/dispose chạy được trong Vite dev và production build. Viewer render được cả output PotreeConverter 2.x (`metadata.json`) lẫn định dạng 1.x (`cloud.js`).
+
+- **Ref Potree:** release chính thức [1.8.2](https://github.com/potree/potree/releases/tag/1.8.2), file `Potree_1.8.2.zip`, SHA-256 `c140a8bce0ce129de762fbc0fd3ba7c21120ffd36d423dd2755abb39f32aebe5`.
+- **Cách build:** Potree không có package npm chính thức. `potree.js` là classic script: nó gán `window.Potree` và tìm `workers/` qua `document.currentScript`, nên không bundle bằng Vite được. Chạy `./scripts/fetch-potree.sh` từ thư mục gốc. Script tải release đã pin checksum và copy phần cần thiết (khoảng 22 MB) vào `frontend/public/potree/`. Thư mục này nằm trong `.gitignore` và ESLint bỏ qua nó. Vite phục vụ thư mục này ở `/potree/` khi dev và copy nguyên vào `dist/` khi build. `potree.js` cần các global jQuery, BinaryHeap, TWEEN và proj4. Bản release có sẵn các thư viện này, và script copy chúng vào `public/potree/libs/`.
+- **Adapter:** `frontend/src/features/viewer/potreeViewer.ts`.
+  - `loadPotree()` chèn các script theo đúng thứ tự, mỗi script chỉ một lần.
+  - `mountPotreeViewer(element, url)` tạo `Potree.Viewer` trong `element`, nạp point cloud rồi `fitToScreen()`.
+  - `dispose()` dừng render loop (`setAnimationLoop(null)`), gọi `dispose()` và `forceContextLoss()` trên renderer, rồi xoá DOM mà Potree đã thêm vào. Potree 1.8.2 không tự có bước dispose này. Nếu point cloud nạp xong sau khi đã dispose thì adapter bỏ qua.
+  - Component Vue gọi mount trong `onMounted` và gọi dispose trong `onBeforeUnmount`. Việc gắn adapter vào `ViewerPage` thuộc #15 (S2-Q1).
+- **Bằng chứng:**
+  - Ba unit test cho adapter (`__tests__/potreeViewer.spec.ts`).
+  - Chạy thử trên Chromium 131 headless (Playwright, WebGL qua SwiftShader), nạp hai nguồn:
+    - Mẫu `lion_takanawa` (định dạng 1.x) có trong release.
+    - Output PotreeConverter 2.1.1 Linux của một file LAS 135 KB.
+  - Cả hai đều render ra point cloud sau khoảng 4 giây.
+  - Sau 6 lần mount/dispose: không còn canvas nào, 6/6 WebGL context của viewer đã bị huỷ, không còn `requestAnimationFrame` nào chạy, script Potree chỉ được nạp một lần và console không có lỗi.
+- **Hạn chế cần xử lý ở các task sau:**
+  - `Potree.loadPointCloud` không reject khi URL sai (chỉ `console.error`), nên phía gọi cần timeout hoặc kiểm tra URL trước.
+  - Potree dựa vào global (`window.Potree`, `$`).
+  - `frontend/Dockerfile` chưa chạy `fetch-potree.sh`. Cần thêm bước này khi viewer được dùng trong Compose.
+- **Khi nào đổi hướng:** nếu sau này phải bỏ global hoặc Potree 1.8.2 gặp lỗi không sửa được thì cân nhắc [`potree-core`](https://www.npmjs.com/package/potree-core) (ESM, bundle được bằng Vite). Đổi lại, nhóm phải tự làm công cụ đo và cắt mà Potree 1.8.2 đã có sẵn cho S2/S3.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:

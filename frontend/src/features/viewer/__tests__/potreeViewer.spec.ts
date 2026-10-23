@@ -1,0 +1,76 @@
+import { describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
+
+import { mountPotreeViewer, type PotreeGlobal } from '../potreeViewer'
+
+function fakePotree() {
+  const renderer = {
+    setAnimationLoop: vi.fn<(callback: null) => void>(),
+    dispose: vi.fn<() => void>(),
+    forceContextLoss: vi.fn<() => void>(),
+  }
+  const viewer = {
+    renderer,
+    scene: { addPointCloud: vi.fn<(pointCloud: unknown) => void>() },
+    setPointBudget: vi.fn<(budget: number) => void>(),
+    setEDLEnabled: vi.fn<(enabled: boolean) => void>(),
+    fitToScreen: vi.fn<() => void>(),
+  }
+  type Loaded = { pointcloud: unknown }
+  let resolveLoad: (value: Loaded) => void = () => {}
+  const potree = {
+    Viewer: vi.fn<(element: HTMLElement) => typeof viewer>(function (element) {
+      element.append(document.createElement('canvas'))
+      return viewer
+    }),
+    loadPointCloud: vi.fn<(url: string) => Promise<Loaded>>(
+      () => new Promise((resolve) => (resolveLoad = resolve)),
+    ),
+  }
+  return {
+    potree: potree as unknown as PotreeGlobal,
+    viewer,
+    loaded: (pointcloud: unknown) => resolveLoad({ pointcloud }),
+  }
+}
+
+describe('mountPotreeViewer', () => {
+  it('creates a viewer in the element and adds the loaded point cloud', async () => {
+    const { potree, viewer, loaded } = fakePotree()
+    const element = document.createElement('div')
+
+    await mountPotreeViewer(element, '/data/pc_1/metadata.json', potree)
+    loaded('cloud')
+    await flushPromises()
+
+    expect(potree.Viewer).toHaveBeenCalledWith(element)
+    expect(potree.loadPointCloud).toHaveBeenCalledWith('/data/pc_1/metadata.json')
+    expect(viewer.scene.addPointCloud).toHaveBeenCalledWith('cloud')
+    expect(viewer.fitToScreen).toHaveBeenCalled()
+  })
+
+  it('stops rendering, releases the WebGL context and empties the element on dispose', async () => {
+    const { potree, viewer } = fakePotree()
+    const element = document.createElement('div')
+    const handle = await mountPotreeViewer(element, '/cloud.json', potree)
+
+    handle.dispose()
+    handle.dispose()
+
+    expect(viewer.renderer.setAnimationLoop).toHaveBeenCalledExactlyOnceWith(null)
+    expect(viewer.renderer.dispose).toHaveBeenCalledOnce()
+    expect(viewer.renderer.forceContextLoss).toHaveBeenCalledOnce()
+    expect(element.children).toHaveLength(0)
+  })
+
+  it('ignores a point cloud that finishes loading after dispose', async () => {
+    const { potree, viewer, loaded } = fakePotree()
+    const handle = await mountPotreeViewer(document.createElement('div'), '/cloud.json', potree)
+
+    handle.dispose()
+    loaded('cloud')
+    await flushPromises()
+
+    expect(viewer.scene.addPointCloud).not.toHaveBeenCalled()
+  })
+})
