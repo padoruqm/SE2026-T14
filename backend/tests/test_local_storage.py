@@ -6,7 +6,11 @@ import unittest
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from app.storage.local import LocalDatasetStorage, UploadTooLargeError
+from app.storage.local import (
+    InvalidStorageKeyError,
+    LocalDatasetStorage,
+    UploadTooLargeError,
+)
 
 MAX_UPLOAD_BYTES = 16
 
@@ -100,6 +104,62 @@ class LocalDatasetStorageTest(unittest.IsolatedAsyncioTestCase):
             await self.storage.save("pc_1", ".las", _chunks(b"x" * 100))
 
         self.assertNotIn(str(self.root), str(raised.exception))
+
+
+    async def test_rejects_dataset_ids_that_could_leave_the_upload_directory(self) -> None:
+        for dataset_id in (
+            "../escape",
+            "..\\escape",
+            "/etc/passwd",
+            "sub/dir",
+            "pc_1/../../escape",
+            "..",
+            "",
+            "pc_1\x00",
+        ):
+            with self.subTest(dataset_id=dataset_id):
+                with self.assertRaises(InvalidStorageKeyError):
+                    await self.storage.save(dataset_id, ".las", _chunks(b"LASF"))
+
+        self.assertEqual([], self._files_under_root())
+
+    async def test_rejects_suffixes_that_are_not_a_plain_extension(self) -> None:
+        for suffix in ("/../escape", ".las/../..", "las", "", ".las\x00", ".a.b", ".part"):
+            with self.subTest(suffix=suffix):
+                with self.assertRaises(InvalidStorageKeyError):
+                    await self.storage.save("pc_1", suffix, _chunks(b"LASF"))
+
+        self.assertEqual([], self._files_under_root())
+
+    async def test_never_writes_outside_the_upload_directory(self) -> None:
+        sibling = self.root / "escape.las"
+
+        with self.assertRaises(InvalidStorageKeyError):
+            await self.storage.save("../escape", ".las", _chunks(b"LASF"))
+
+        self.assertFalse(sibling.exists())
+
+    async def test_rejects_a_symlinked_destination(self) -> None:
+        target = self.root / "victim.las"
+        target.write_bytes(b"keep me")
+        self.upload_root.mkdir()
+        (self.upload_root / "pc_1.las").symlink_to(target)
+
+        with self.assertRaises(InvalidStorageKeyError):
+            await self.storage.save("pc_1", ".las", _chunks(b"overwritten"))
+
+        self.assertEqual(b"keep me", target.read_bytes())
+
+    async def test_does_not_write_through_a_symlinked_partial_file(self) -> None:
+        target = self.root / "victim.txt"
+        target.write_bytes(b"keep me")
+        self.upload_root.mkdir()
+        (self.upload_root / "pc_1.las.part").symlink_to(target)
+
+        with self.assertRaises(InvalidStorageKeyError):
+            await self.storage.save("pc_1", ".las", _chunks(b"overwritten"))
+
+        self.assertEqual(b"keep me", target.read_bytes())
 
 
 if __name__ == "__main__":
