@@ -4,11 +4,12 @@ import { computed, ref } from 'vue'
 import { useUpload } from './useUpload'
 import { validateUploadFile } from './uploadValidation'
 
-const { status, error, result, upload, reset } = useUpload()
+const { status, error, result, progress, upload, retryConversion, reset } = useUpload()
 const selectedFile = ref<File | null>(null)
 const validationError = ref<string | null>(null)
 
 const isUploading = computed(() => status.value === 'uploading')
+const isProcessing = computed(() => status.value === 'queued' || status.value === 'running')
 const message = computed(() => validationError.value ?? error.value)
 
 function onFileChange(event: Event) {
@@ -21,6 +22,11 @@ function onFileChange(event: Event) {
 function submit() {
   if (selectedFile.value && !validationError.value) upload(selectedFile.value)
 }
+
+function retry() {
+  if (result.value) retryConversion()
+  else submit()
+}
 </script>
 
 <template>
@@ -30,19 +36,33 @@ function submit() {
       id="point-cloud-file"
       type="file"
       accept=".las,.laz"
-      :disabled="isUploading"
+      :disabled="isUploading || isProcessing"
       @change="onFileChange"
     />
 
-    <button type="submit" :disabled="!selectedFile || !!validationError || isUploading">
-      {{ isUploading ? 'Uploading…' : 'Upload' }}
+    <button
+      type="submit"
+      :disabled="!selectedFile || !!validationError || isUploading || isProcessing"
+    >
+      {{ isUploading ? 'Uploading…' : isProcessing ? 'Converting…' : 'Upload' }}
     </button>
 
     <div aria-live="polite">
       <p v-if="message" role="alert" class="upload-error">{{ message }}</p>
-      <button v-if="status === 'error'" type="button" @click="submit">Try again</button>
-      <p v-if="status === 'success' && result">
-        Uploaded {{ result.filename }} (ID: {{ result.id }}, status: {{ result.status }})
+      <button v-if="status === 'failed' || status === 'error'" type="button" @click="retry">
+        Try again
+      </button>
+      <p v-if="status === 'queued'" role="status">Conversion queued…</p>
+      <p v-if="status === 'running'" role="status">Conversion in progress…</p>
+      <progress
+        v-if="isProcessing && progress !== null"
+        :value="progress"
+        max="100"
+        aria-label="Conversion progress"
+      />
+      <p v-if="isProcessing && progress !== null">{{ progress }}%</p>
+      <p v-if="status === 'done' && result" role="status">
+        Conversion complete for {{ result.filename }} (ID: {{ result.id }}).
       </p>
     </div>
   </form>
