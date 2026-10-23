@@ -16,6 +16,18 @@ Việc tích hợp Potree/Vite, PDAL, PotreeConverter và LAZ vẫn phải đư�
 
 Backend có nền tảng nhỏ cho bước Upload: `POST /api/upload` nhận `multipart/form-data` chứa tệp LAS/LAZ và lưu bằng dataset ID. Frontend là Vue 3 shell có route upload và viewer rỗng. Conversion job và viewer sẽ được thêm sau khi spike kỹ thuật được duyệt.
 
+## Chạy bằng Docker Compose
+
+Cần Docker Engine với Docker Compose plugin. Từ thư mục gốc repository:
+
+```bash
+docker compose up --build
+```
+
+Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
+
+Compose hiện dựng frontend và backend của upload foundation. PDAL/PotreeConverter chưa được cài vào image: cách đóng gói và phiên bản cần được xác minh trong các spike xử lý tương ứng trước khi thêm vào runtime image.
+
 ## Chạy backend foundation
 
 Yêu cầu Python 3.11 trở lên. Từ thư mục gốc repository:
