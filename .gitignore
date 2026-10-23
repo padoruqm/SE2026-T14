@@ -53,3 +53,6 @@ docs/
 
 # Local agent instructions
 AGENTS.md
+
+# Potree release files (scripts/fetch-potree.sh)
+frontend/public/potree/
