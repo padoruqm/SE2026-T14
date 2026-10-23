@@ -20,6 +20,13 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 
 /**
  * Upload a LAS/LAZ point cloud
+ *
+ * The file is streamed to storage under a server-generated name. The LAS
+ * header is validated on the way: a bad signature, a truncated or
+ * inconsistent header, an unsupported extension or an oversized file is
+ * rejected and nothing is kept. `metadata` is read from the header;
+ * `crs` is null when the file declares no EPSG code.
+ *
  */
 export const uploadPointCloud = <ThrowOnError extends boolean = false>(options: Options<UploadPointCloudData, ThrowOnError>): RequestResult<UploadPointCloudResponses, UploadPointCloudErrors, ThrowOnError> => (options.client ?? client).post<UploadPointCloudResponses, UploadPointCloudErrors, ThrowOnError>({
     ...formDataBodySerializer,

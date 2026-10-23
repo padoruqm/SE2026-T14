@@ -14,7 +14,7 @@ Việc tích hợp Potree/Vite, PDAL, PotreeConverter và LAZ vẫn phải đư�
 
 ## Trạng thái repository
 
-Backend có nền tảng nhỏ cho bước Upload: `POST /api/upload` nhận `multipart/form-data` chứa tệp LAS/LAZ và lưu bằng dataset ID. Frontend là Vue 3 shell có route upload và viewer rỗng. Conversion job và viewer sẽ được thêm sau khi spike kỹ thuật được duyệt.
+Backend có nền tảng nhỏ cho bước Upload: `POST /api/upload` nhận `multipart/form-data` chứa tệp LAS/LAZ, kiểm tra header LAS khi stream, lưu bằng dataset ID do server sinh và trả `pointCount`, `bounds`, `crs` đọc từ header (`crs` là `null` nếu file không khai báo mã EPSG). Frontend là Vue 3 shell có route upload và viewer rỗng. Conversion job và viewer sẽ được thêm sau khi spike kỹ thuật được duyệt.
 
 ## Chạy bằng Docker Compose
 

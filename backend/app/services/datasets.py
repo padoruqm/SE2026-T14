@@ -10,10 +10,16 @@ from app.core.errors import (
     InvalidPointCloudError,
     UnsupportedFileTypeError,
 )
+from app.services.las_metadata import (
+    HEADER_PROBE_BYTES,
+    LAS_SIGNATURE,
+    LasMetadata,
+    parse_las_metadata,
+    required_head_length,
+)
 from app.storage.local import LocalDatasetStorage, UploadTooLargeError
 
 ALLOWED_SUFFIXES = frozenset({".las", ".laz"})
-LAS_SIGNATURE = b"LASF"
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,27 +27,38 @@ class StoredDataset:
     id: str
     filename: str
     status: str
+    metadata: LasMetadata
 
 
 def sanitize_filename(filename: str) -> str:
     return PurePosixPath(PureWindowsPath(filename).name).name
 
 
-async def _validated_chunks(chunks: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-    head = b""
-    validated = False
-    async for chunk in chunks:
-        if not validated:
-            head += chunk
-            if len(head) < len(LAS_SIGNATURE):
+class _HeaderInspector:
+    """Pass chunks through while validating the LAS header and reading its metadata."""
+
+    def __init__(self) -> None:
+        self.metadata: LasMetadata | None = None
+
+    async def stream(self, chunks: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
+        head = bytearray()
+        needed: int | None = None
+        async for chunk in chunks:
+            if self.metadata is not None:
+                yield chunk
                 continue
-            if not head.startswith(LAS_SIGNATURE):
+
+            head += chunk
+            if len(head) >= len(LAS_SIGNATURE) and not head.startswith(LAS_SIGNATURE):
                 raise InvalidPointCloudError()
-            validated = True
-            chunk = head
-        yield chunk
-    if not validated:
-        raise InvalidPointCloudError()
+            if needed is None and len(head) >= HEADER_PROBE_BYTES:
+                needed = required_head_length(bytes(head))
+            if needed is not None and len(head) >= needed:
+                self.metadata = parse_las_metadata(bytes(head[:needed]))
+                yield bytes(head)
+
+        if self.metadata is None:
+            raise InvalidPointCloudError()
 
 
 class DatasetService:
@@ -57,9 +74,17 @@ class DatasetService:
             raise UnsupportedFileTypeError()
 
         dataset_id = f"pc_{uuid4().hex}"
+        inspector = _HeaderInspector()
         try:
-            await self._storage.save(dataset_id, suffix, _validated_chunks(chunks))
+            await self._storage.save(dataset_id, suffix, inspector.stream(chunks))
         except UploadTooLargeError as exc:
             raise FileTooLargeError() from exc
 
-        return StoredDataset(id=dataset_id, filename=safe_filename, status="uploaded")
+        if inspector.metadata is None:
+            raise InvalidPointCloudError()
+        return StoredDataset(
+            id=dataset_id,
+            filename=safe_filename,
+            status="uploaded",
+            metadata=inspector.metadata,
+        )
