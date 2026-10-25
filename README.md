@@ -26,7 +26,9 @@ docker compose up --build
 
 Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
 
-Compose hiện dựng frontend và backend của upload foundation. PDAL/PotreeConverter chưa được cài vào image: cách đóng gói và phiên bản cần được xác minh trong các spike xử lý tương ứng trước khi thêm vào runtime image.
+Compose trên nhánh `dev` hiện dựng frontend và backend của upload foundation, chưa cài PDAL/PotreeConverter. Spike #14 đã xác nhận riêng PotreeConverter 2.1.1 trên Linux đọc được LAZ: container dùng Dockerfile converter tại commit `d25dac4` đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải luồng upload → conversion đã tích hợp: processor adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output của nó thành LAZ; hỗ trợ export LAZ là phạm vi khác.
+
+PDAL và việc tích hợp converter vào API/job cần được xử lý riêng trước khi thêm vào Compose runtime.
 
 ## Chạy backend foundation
 
