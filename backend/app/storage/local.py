@@ -3,10 +3,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-
 class UploadTooLargeError(ValueError):
     pass
-
 
 class LocalDatasetStorage:
     def __init__(self, root: Path, max_upload_bytes: int) -> None:
