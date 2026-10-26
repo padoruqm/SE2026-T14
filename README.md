@@ -1,8 +1,8 @@
 # SE2026-T14 — Point Cloud Explorer
 
-Web app xử lý point cloud LAS/LAZ cho đồ án Công nghệ phần mềm. MVP đi theo luồng Upload → 3D Viewer → Measure → Crop → Export; Filter cơ bản là P1.
+MVP đi theo luồng Upload → 3D Viewer → Measure → Crop → Export; Filter cơ bản là P1.
 
-## Công nghệ định hướng
+## Công nghệ 
 
 - Frontend: Vue 3 + TypeScript + Vite.
 - Viewer: Potree/Three.js.
@@ -125,8 +125,6 @@ Muốn xem response lỗi từ mock, gửi header `Prefer: code=404` (hoặc mã
 3. Cài hook local theo [hướng dẫn hook](scripts/README.md), rồi tạo commit Conventional Commit nhỏ.
 4. Mở Draft PR sớm, tự review diff, chờ CI và một approval.
 
-Tài liệu lập kế hoạch nội bộ được lưu ngoài repository, không được commit vào đây.
-
 ## Cấu trúc
 
 ```text
@@ -137,5 +135,3 @@ data/sample/  Chỉ dữ liệu mẫu nhỏ, đã được phép phân phối
 scripts/      Validation, bootstrap và automation an toàn
 .github/      Template và CI policy
 ```
-
-Chi tiết quy trình GitHub, kiến trúc và kế hoạch sprint thuộc bộ tài liệu nội bộ của nhóm.
