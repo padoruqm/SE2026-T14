@@ -67,6 +67,10 @@ Mọi lỗi dùng chung một schema:
 | 422 | `VALIDATION_ERROR` | Thiếu field `file` hoặc request sai định dạng |
 | 500 | `INTERNAL_ERROR` | Lỗi không dự đoán; không lộ chi tiết nội bộ |
 
+Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job convert (`202`, trả `Job` ở trạng thái `queued`) rồi poll `GET /api/job/{id}` tới khi `state` là `succeeded` hoặc `failed`. Job chạy nền trong tiến trình backend và lưu trong bộ nhớ nên mất khi restart. Kết quả ghi vào `<APP_STORAGE_ROOT>/converted/<id>/`. Gọi lại convert khi đã có kết quả hoặc job đang chạy trả `409 CONFLICT`, trừ khi gửi `{"force": true}`.
+
+Converter là PotreeConverter chạy bằng subprocess; đặt `APP_POTREE_CONVERTER_PATH` tới file thực thi, và `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Chưa đặt đường dẫn thì job kết thúc `failed` với `INTERNAL_ERROR`.
+
 Có thể xem tài liệu tương tác tại `http://127.0.0.1:8000/docs`.
 
 ## Chạy frontend

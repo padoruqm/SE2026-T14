@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -20,6 +22,7 @@ class InvalidStorageKeyError(ValueError):
 class LocalDatasetStorage:
     def __init__(self, root: Path, max_upload_bytes: int) -> None:
         self._upload_root = root / "uploads"
+        self._converted_root = root / "converted"
         self._max_upload_bytes = max_upload_bytes
 
     async def save(
@@ -53,3 +56,36 @@ class LocalDatasetStorage:
             raise
 
         return destination, size
+
+    def find(self, dataset_id: str) -> Path | None:
+        """Return the stored upload for `dataset_id`, or None if there is none."""
+        if not _DATASET_ID.fullmatch(dataset_id) or not self._upload_root.is_dir():
+            return None
+        for candidate in sorted(self._upload_root.glob(f"{dataset_id}.*")):
+            if (
+                candidate.suffix.lower() not in _RESERVED_SUFFIXES
+                and candidate.is_file()
+                and not candidate.is_symlink()
+            ):
+                return candidate
+        return None
+
+    def has_converted(self, dataset_id: str) -> bool:
+        return (self._converted_root / dataset_id).is_dir()
+
+    def new_staging_dir(self, dataset_id: str) -> Path:
+        """Create an empty directory next to the results for a conversion to fill."""
+        self._converted_root.mkdir(parents=True, exist_ok=True)
+        return Path(
+            tempfile.mkdtemp(prefix=f".{dataset_id}-", dir=self._converted_root)
+        )
+
+    def publish_converted(self, dataset_id: str, staging: Path) -> None:
+        """Atomically make `staging` the result for `dataset_id`, replacing any old one."""
+        destination = self._converted_root / dataset_id
+        if destination.exists():
+            shutil.rmtree(destination)
+        staging.rename(destination)
+
+    def discard_staging_dir(self, staging: Path) -> None:
+        shutil.rmtree(staging, ignore_errors=True)

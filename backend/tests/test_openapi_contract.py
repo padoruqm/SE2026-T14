@@ -45,6 +45,28 @@ class OpenApiContractTest(unittest.TestCase):
             self.assertIn(status, contract)
             self.assertIn(status, implemented)
 
+    def test_convert_and_job_routes_match_the_contract(self) -> None:
+        expected = {
+            ("/api/pointcloud/{id}/convert", "post", "202"),
+            ("/api/job/{id}", "get", "200"),
+        }
+
+        for path, method, status in expected:
+            contract = self.spec["paths"][path][method]["responses"]
+            implemented_path = path.replace("{id}", "{point_cloud_id}")
+            if "job" in path:
+                implemented_path = path.replace("{id}", "{job_id}")
+            implemented = self.implemented["paths"][implemented_path][method]["responses"]
+            self.assertIn(status, contract)
+            self.assertIn(status, implemented)
+            self.assertIn("404", implemented)
+
+    def test_job_response_has_the_contract_fields(self) -> None:
+        contract = self.spec["components"]["schemas"]["Job"]
+        implemented = self.implemented["components"]["schemas"]["JobResponse"]
+
+        self.assertEqual(_properties(contract), _properties(implemented))
+
     def test_point_cloud_response_has_the_contract_fields(self) -> None:
         contract = self.spec["components"]["schemas"]["PointCloud"]
         implemented = self.implemented["components"]["schemas"]["PointCloudResponse"]
