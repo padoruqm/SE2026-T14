@@ -21,6 +21,7 @@ export default defineConfigWithVueTs(
     '**/dist-ssr/**',
     '**/coverage/**',
     'src/api/generated/**',
+    'public/potree/**',
   ]),
 
   ...pluginVue.configs['flat/essential'],
