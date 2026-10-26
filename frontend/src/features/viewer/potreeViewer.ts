@@ -8,6 +8,15 @@ interface PotreeRenderer {
   forceContextLoss(): void
 }
 
+interface PotreeMaterial {
+  size: number
+  activeAttributeName: string
+}
+
+interface PotreePointCloud {
+  material: PotreeMaterial
+}
+
 interface PotreeViewer {
   renderer: PotreeRenderer
   scene: { addPointCloud(pointCloud: unknown): void }
@@ -27,7 +36,19 @@ declare global {
   }
 }
 
+export type ColorMode = 'rgb' | 'elevation' | 'intensity'
+
+// Potree names the attribute that colors the points; RGB is called `rgba`.
+const COLOR_ATTRIBUTES: Record<ColorMode, string> = {
+  rgb: 'rgba',
+  elevation: 'elevation',
+  intensity: 'intensity',
+}
+
 export interface PotreeViewerHandle {
+  setPointSize(size: number): void
+  setColorMode(mode: ColorMode): void
+  resetView(): void
   dispose(): void
 }
 
@@ -74,13 +95,38 @@ export async function mountPotreeViewer(
   viewer.setPointBudget(1_000_000)
 
   let disposed = false
+  let loaded: PotreePointCloud | null = null
+  // Remembered so a change made while the cloud is still loading is applied once it arrives.
+  let pointSize: number | null = null
+  let colorMode: ColorMode | null = null
+
+  // Only material settings change, so the point cloud is never converted or fetched again.
+  function applyMaterial() {
+    if (!loaded) return
+    if (pointSize !== null) loaded.material.size = pointSize
+    if (colorMode !== null) loaded.material.activeAttributeName = COLOR_ATTRIBUTES[colorMode]
+  }
+
   Potree.loadPointCloud(pointCloudUrl).then(({ pointcloud }) => {
     if (disposed) return
+    loaded = pointcloud as PotreePointCloud
+    applyMaterial()
     viewer.scene.addPointCloud(pointcloud)
     viewer.fitToScreen()
   })
 
   return {
+    setPointSize(size) {
+      pointSize = size
+      applyMaterial()
+    },
+    setColorMode(mode) {
+      colorMode = mode
+      applyMaterial()
+    },
+    resetView() {
+      viewer.fitToScreen()
+    },
     dispose() {
       if (disposed) return
       disposed = true
