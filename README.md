@@ -10,11 +10,11 @@ MVP đi theo luồng Upload → 3D Viewer → Measure → Crop → Export; Filte
 - Processing: PDAL + PotreeConverter.
 - Runtime: Docker Compose; storage filesystem ở MVP.
 
-Việc tích hợp Potree/Vite, PDAL, PotreeConverter và LAZ vẫn phải được spike, không xem đây là cam kết về phiên bản công cụ.
+Việc tích hợp viewer Potree/Vite, PDAL và hỗ trợ LAZ vẫn cần spike; không xem đó là cam kết về khả năng hoặc phiên bản đã kiểm chứng.
 
 ## Trạng thái repository
 
-Backend có nền tảng nhỏ cho bước Upload: `POST /api/upload` nhận `multipart/form-data` chứa tệp LAS/LAZ, kiểm tra header LAS khi stream, lưu bằng dataset ID do server sinh và trả `pointCount`, `bounds`, `crs` đọc từ header (`crs` là `null` nếu file không khai báo mã EPSG). Frontend là Vue 3 shell có route upload và viewer rỗng. Conversion job và viewer sẽ được thêm sau khi spike kỹ thuật được duyệt.
+Backend có nền tảng upload và adapter xử lý LAS qua PotreeConverter. API conversion/job chưa được nối vào adapter; frontend vẫn là Vue 3 shell có route upload và viewer rỗng.
 
 ## Chạy bằng Docker Compose
 
@@ -26,9 +26,11 @@ docker compose up --build
 
 Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
 
-Compose trên nhánh `dev` hiện dựng frontend và backend của upload foundation, chưa cài PDAL/PotreeConverter. Spike #14 đã xác nhận riêng PotreeConverter 2.1.1 trên Linux đọc được LAZ: container dùng Dockerfile converter tại commit `d25dac4` đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải luồng upload → conversion đã tích hợp: processor adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output của nó thành LAZ; hỗ trợ export LAZ là phạm vi khác.
+Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Test chuyển đổi LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ vẫn chờ spike #14.
 
-PDAL và việc tích hợp converter vào API/job cần được xử lý riêng trước khi thêm vào Compose runtime.
+Compose build backend image có PotreeConverter 2.1.1, nhưng API/job hiện chưa gọi adapter. PDAL chưa được cài. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải luồng upload → conversion đã tích hợp; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ.
+
+PDAL và việc nối converter adapter vào API/job cần được xử lý riêng.
 
 ## Chạy backend foundation
 
