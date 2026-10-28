@@ -15,6 +15,9 @@ from app.processing.errors import (
 )
 
 
+_STDERR_LIMIT = 2000
+
+
 class PotreeConverterProcessor(Processor):
     key = "potree-converter"
     input_schema: Mapping[str, object] = {
@@ -89,6 +92,7 @@ class PotreeConverterProcessor(Processor):
             raise ProcessorExecutionError(
                 "PotreeConverter exited unsuccessfully",
                 return_code=completed.returncode,
+                stderr=(completed.stderr or "")[-_STDERR_LIMIT:],
             )
 
         metadata_path = output_directory / "metadata.json"

@@ -24,7 +24,11 @@ class Job:
 
 
 class JobStore:
-    """In-memory job registry; jobs are lost when the process restarts."""
+    """In-memory job registry; jobs are lost when the process restarts.
+
+    Jobs are never evicted, so the registry grows for the life of the process.
+    That is acceptable for the MVP.
+    """
 
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}

@@ -15,6 +15,12 @@ class ProcessorTimeoutError(ProcessingError):
 
 
 class ProcessorExecutionError(ProcessingError):
-    def __init__(self, message: str, return_code: int | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        return_code: int | None = None,
+        stderr: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.return_code = return_code
+        self.stderr = stderr

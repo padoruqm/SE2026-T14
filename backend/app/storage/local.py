@@ -74,18 +74,34 @@ class LocalDatasetStorage:
         return (self._converted_root / dataset_id).is_dir()
 
     def new_staging_dir(self, dataset_id: str) -> Path:
-        """Create an empty directory next to the results for a conversion to fill."""
+        """Create an empty directory next to the results for a conversion to work in."""
         self._converted_root.mkdir(parents=True, exist_ok=True)
         return Path(
             tempfile.mkdtemp(prefix=f".{dataset_id}-", dir=self._converted_root)
         )
 
-    def publish_converted(self, dataset_id: str, staging: Path) -> None:
-        """Atomically make `staging` the result for `dataset_id`, replacing any old one."""
+    def publish_converted(self, dataset_id: str, result: Path) -> None:
+        """Make `result` the converted output for `dataset_id`, replacing any old one.
+
+        The old result is moved aside first, so a reader sees either the old or the
+        new result and never a missing one.
+        """
         destination = self._converted_root / dataset_id
+        previous: Path | None = None
         if destination.exists():
-            shutil.rmtree(destination)
-        staging.rename(destination)
+            previous = Path(
+                tempfile.mkdtemp(prefix=f".{dataset_id}-old-", dir=self._converted_root)
+            )
+            destination.rename(previous / "result")
+        try:
+            result.rename(destination)
+        except BaseException:
+            if previous is not None:
+                (previous / "result").rename(destination)
+            raise
+        finally:
+            if previous is not None:
+                shutil.rmtree(previous, ignore_errors=True)
 
     def discard_staging_dir(self, staging: Path) -> None:
         shutil.rmtree(staging, ignore_errors=True)

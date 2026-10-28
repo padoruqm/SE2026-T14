@@ -14,7 +14,7 @@ Việc tích hợp viewer Potree/Vite, PDAL và hỗ trợ LAZ vẫn cần spike
 
 ## Trạng thái repository
 
-Backend có nền tảng upload và adapter xử lý LAS qua PotreeConverter. API conversion/job chưa được nối vào adapter; frontend vẫn là Vue 3 shell có route upload và viewer rỗng.
+Backend có nền tảng upload và adapter xử lý LAS qua PotreeConverter. API `POST /api/pointcloud/{id}/convert` chạy adapter này qua job nền; frontend vẫn là Vue 3 shell có route upload và viewer rỗng.
 
 ## Chạy bằng Docker Compose
 
@@ -28,9 +28,9 @@ Mở frontend tại `http://localhost:5173`; health endpoint backend là `http:/
 
 Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Test chuyển đổi LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ vẫn chờ spike #14.
 
-Compose build backend image có PotreeConverter 2.1.1, nhưng API/job hiện chưa gọi adapter. PDAL chưa được cài. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải luồng upload → conversion đã tích hợp; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ.
+Compose build backend image có PotreeConverter 2.1.1, và API convert gọi adapter qua job nền. PDAL chưa được cài. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải xác nhận luồng upload → conversion với LAZ; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ.
 
-PDAL và việc nối converter adapter vào API/job cần được xử lý riêng.
+PDAL cần được xử lý riêng.
 
 ## Chạy backend foundation
 
@@ -67,9 +67,9 @@ Mọi lỗi dùng chung một schema:
 | 422 | `VALIDATION_ERROR` | Thiếu field `file` hoặc request sai định dạng |
 | 500 | `INTERNAL_ERROR` | Lỗi không dự đoán; không lộ chi tiết nội bộ |
 
-Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job convert (`202`, trả `Job` ở trạng thái `queued`) rồi poll `GET /api/job/{id}` tới khi `state` là `succeeded` hoặc `failed`. Job chạy nền trong tiến trình backend và lưu trong bộ nhớ nên mất khi restart. Kết quả ghi vào `<APP_STORAGE_ROOT>/converted/<id>/`. Gọi lại convert khi đã có kết quả hoặc job đang chạy trả `409 CONFLICT`, trừ khi gửi `{"force": true}`.
+Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job convert (`202`, trả `Job` ở trạng thái `queued`) rồi poll `GET /api/job/{id}` tới khi `state` là `succeeded` hoặc `failed`. Job chạy nền trong tiến trình backend và lưu trong bộ nhớ nên mất khi restart; job cũng không bị xoá nên bộ nhớ tăng dần (chấp nhận được ở MVP). Kết quả ghi vào `<APP_STORAGE_ROOT>/converted/<id>/`. Gọi lại convert khi đã có kết quả hoặc job đang chạy trả `409 CONFLICT`, trừ khi gửi `{"force": true}`.
 
-Converter là PotreeConverter chạy bằng subprocess; đặt `APP_POTREE_CONVERTER_PATH` tới file thực thi, và `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Chưa đặt đường dẫn thì job kết thúc `failed` với `INTERNAL_ERROR`.
+Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
 Có thể xem tài liệu tương tác tại `http://127.0.0.1:8000/docs`.
 

@@ -8,12 +8,12 @@ from app.core.config import Settings
 from app.core.errors import register_error_handlers
 from app.jobs.runner import ConvertJobRunner
 from app.jobs.store import JobStore
-from app.processing.converter import Converter, PotreeConverter
+from app.processing import PotreeConverterProcessor, Processor
 from app.storage.local import LocalDatasetStorage
 
 
 def create_app(
-    settings: Settings | None = None, converter: Converter | None = None
+    settings: Settings | None = None, processor: Processor | None = None
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_environment()
     app = FastAPI(title="Point Cloud Explorer API", version="0.1.0")
@@ -24,10 +24,10 @@ def create_app(
     app.state.job_store = JobStore()
     app.state.jobs = ConvertJobRunner(
         storage=app.state.storage,
-        converter=converter
-        or PotreeConverter(
-            resolved_settings.potree_converter_path,
-            resolved_settings.conversion_timeout_seconds,
+        processor=processor
+        or PotreeConverterProcessor(
+            executable=resolved_settings.potree_converter_path,
+            timeout_seconds=resolved_settings.conversion_timeout_seconds,
         ),
         store=app.state.job_store,
         workers=resolved_settings.job_workers,

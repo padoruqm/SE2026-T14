@@ -1,30 +1,43 @@
 from __future__ import annotations
 
+import os
+import shutil
 import tempfile
 import time
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
-from app.processing.converter import ConversionError, PotreeConverter
+from app.processing import PotreeConverterProcessor, ProcessingContext, ProcessingResult
+from app.processing.errors import ProcessingInputError, ProcessorExecutionError
+from app.storage.local import LocalDatasetStorage
 from las_fixtures import build_las
 
 LAS_BYTES = build_las()
 
 
-class RecordingConverter:
+class RecordingProcessor:
+    key = "recording"
+    input_schema: Mapping[str, object] = {"type": "object"}
+
     def __init__(self, error: Exception | None = None) -> None:
         self.error = error
         self.calls: list[Path] = []
 
-    async def convert(self, source: Path, output_dir: Path) -> None:
-        self.calls.append(source)
+    def execute(
+        self, context: ProcessingContext, parameters: Mapping[str, object]
+    ) -> ProcessingResult:
+        self.calls.append(context.input_path)
         if self.error is not None:
             raise self.error
-        (output_dir / "metadata.json").write_text("{}", encoding="utf-8")
+        context.output_directory.mkdir()
+        metadata = context.output_directory / "metadata.json"
+        metadata.write_text("{}", encoding="utf-8")
+        return ProcessingResult(context.output_directory, metadata)
 
 
 class ConvertFlowTest(unittest.TestCase):
@@ -36,9 +49,9 @@ class ConvertFlowTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def _client(self, converter) -> TestClient:
+    def _client(self, processor) -> TestClient:
         # Entering the context keeps one event loop alive so background jobs finish.
-        client = TestClient(create_app(self.settings, converter))
+        client = TestClient(create_app(self.settings, processor))
         client.__enter__()
         self.addCleanup(client.__exit__, None, None, None)
         return client
@@ -58,8 +71,8 @@ class ConvertFlowTest(unittest.TestCase):
         self.fail("job did not finish")
 
     def test_uploaded_file_converts_end_to_end(self) -> None:
-        converter = RecordingConverter()
-        client = self._client(converter)
+        processor = RecordingProcessor()
+        client = self._client(processor)
         point_cloud_id = self._upload(client)
 
         response = client.post(f"/api/pointcloud/{point_cloud_id}/convert")
@@ -74,16 +87,14 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual(point_cloud_id, job["resultId"])
         self.assertIsNone(job["error"])
         self.assertEqual(
-            [self.root / "uploads" / f"{point_cloud_id}.las"], converter.calls
+            [self.root / "uploads" / f"{point_cloud_id}.las"], processor.calls
         )
         self.assertTrue((self.root / "converted" / point_cloud_id / "metadata.json").is_file())
         self.assertEqual([], [p for p in (self.root / "converted").iterdir() if p.name.startswith(".")])
 
     def test_failed_conversion_reports_the_error_and_leaves_no_result(self) -> None:
-        converter = RecordingConverter(
-            ConversionError("INVALID_POINT_CLOUD", "The point cloud could not be converted")
-        )
-        client = self._client(converter)
+        processor = RecordingProcessor(ProcessingInputError("not a LAS file"))
+        client = self._client(processor)
         point_cloud_id = self._upload(client)
 
         job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
@@ -94,8 +105,21 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual("INVALID_POINT_CLOUD", job["error"]["code"])
         self.assertEqual([], list((self.root / "converted").iterdir()))
 
+    def test_processor_crash_is_an_internal_error_not_an_invalid_file(self) -> None:
+        client = self._client(
+            RecordingProcessor(ProcessorExecutionError("boom", 1, "stderr text"))
+        )
+        point_cloud_id = self._upload(client)
+
+        job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
+        job = self._wait_for_job(client, job_id)
+
+        self.assertEqual("failed", job["state"])
+        self.assertEqual("INTERNAL_ERROR", job["error"]["code"])
+        self.assertNotIn("stderr text", str(job))
+
     def test_unexpected_converter_error_hides_internal_details(self) -> None:
-        client = self._client(RecordingConverter(RuntimeError("/secret/path")))
+        client = self._client(RecordingProcessor(RuntimeError("/secret/path")))
         point_cloud_id = self._upload(client)
 
         job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
@@ -106,7 +130,7 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertNotIn("secret", str(job))
 
     def test_convert_unknown_point_cloud_returns_not_found(self) -> None:
-        client = self._client(RecordingConverter())
+        client = self._client(RecordingProcessor())
 
         response = client.post("/api/pointcloud/pc_missing/convert")
 
@@ -114,15 +138,15 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual("NOT_FOUND", response.json()["error"]["code"])
 
     def test_convert_rejects_ids_that_escape_the_upload_folder(self) -> None:
-        client = self._client(RecordingConverter())
+        client = self._client(RecordingProcessor())
 
         response = client.post("/api/pointcloud/..%2F..%2Fetc/convert")
 
         self.assertEqual(404, response.status_code)
 
     def test_second_convert_conflicts_unless_forced(self) -> None:
-        converter = RecordingConverter()
-        client = self._client(converter)
+        processor = RecordingProcessor()
+        client = self._client(processor)
         point_cloud_id = self._upload(client)
         job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
         self._wait_for_job(client, job_id)
@@ -136,10 +160,10 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual("CONFLICT", conflict.json()["error"]["code"])
         self.assertEqual(202, forced.status_code)
         self.assertEqual("succeeded", self._wait_for_job(client, forced.json()["id"])["state"])
-        self.assertEqual(2, len(converter.calls))
+        self.assertEqual(2, len(processor.calls))
 
     def test_get_unknown_job_returns_not_found(self) -> None:
-        client = self._client(RecordingConverter())
+        client = self._client(RecordingProcessor())
 
         response = client.get("/api/job/job_missing")
 
@@ -147,7 +171,7 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual("NOT_FOUND", response.json()["error"]["code"])
 
     def test_rejected_upload_creates_nothing_to_convert(self) -> None:
-        client = self._client(RecordingConverter())
+        client = self._client(RecordingProcessor())
 
         response = client.post("/api/upload", files={"file": ("a.las", b"NOTLAS-DATA")})
 
@@ -155,41 +179,67 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual(404, client.post("/api/pointcloud/pc_x/convert").status_code)
 
 
-class PotreeConverterTest(unittest.IsolatedAsyncioTestCase):
-    async def test_unconfigured_executable_fails_with_internal_error(self) -> None:
-        with self.assertRaises(ConversionError) as context:
-            await PotreeConverter(None, 1).convert(Path("in.las"), Path("out"))
+class PublishConvertedTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name)
+        self.addCleanup(self.temporary_directory.cleanup)
+        self.storage = LocalDatasetStorage(self.root, 1024)
 
-        self.assertEqual("INTERNAL_ERROR", context.exception.code)
+    def _staged(self, content: str) -> Path:
+        staging = self.storage.new_staging_dir("pc_a")
+        result = staging / "result"
+        result.mkdir()
+        (result / "metadata.json").write_text(content, encoding="utf-8")
+        return result
 
-    async def test_missing_executable_fails_with_internal_error(self) -> None:
-        with self.assertRaises(ConversionError) as context:
-            await PotreeConverter("/nonexistent/converter", 1).convert(
-                Path("in.las"), Path("out")
-            )
+    def test_publish_replaces_the_old_result_and_leaves_nothing_behind(self) -> None:
+        self.storage.publish_converted("pc_a", self._staged("old"))
+        self.storage.publish_converted("pc_a", self._staged("new"))
 
-        self.assertEqual("INTERNAL_ERROR", context.exception.code)
+        converted = self.root / "converted"
+        self.assertEqual(
+            "new", (converted / "pc_a" / "metadata.json").read_text(encoding="utf-8")
+        )
+        leftovers = [p.name for p in converted.iterdir() if p.name.startswith(".pc_a-old")]
+        self.assertEqual([], leftovers)
 
-    async def test_non_zero_exit_code_is_an_invalid_point_cloud(self) -> None:
-        with self.assertRaises(ConversionError) as context:
-            await PotreeConverter("false", 5).convert(Path("in.las"), Path("out"))
+    def test_failed_publish_keeps_the_old_result(self) -> None:
+        self.storage.publish_converted("pc_a", self._staged("old"))
 
-        self.assertEqual("INVALID_POINT_CLOUD", context.exception.code)
+        with self.assertRaises(FileNotFoundError):
+            self.storage.publish_converted("pc_a", self.root / "missing")
 
-    async def test_successful_exit_code_passes(self) -> None:
-        await PotreeConverter("true", 5).convert(Path("in.las"), Path("out"))
+        self.assertEqual(
+            "old",
+            (self.root / "converted" / "pc_a" / "metadata.json").read_text(
+                encoding="utf-8"
+            ),
+        )
 
-    async def test_timeout_kills_the_process(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            script = Path(directory) / "slow.sh"
-            script.write_text("#!/bin/sh\nsleep 30\n", encoding="utf-8")
-            script.chmod(0o755)
-            with self.assertRaises(ConversionError) as context:
-                await PotreeConverter(str(script), 0.1).convert(
-                    Path("in.las"), Path("out")
-                )
 
-        self.assertEqual("INTERNAL_ERROR", context.exception.code)
+@unittest.skipUnless(
+    shutil.which(os.getenv("POTREE_CONVERTER_PATH", "PotreeConverter")),
+    "PotreeConverter is not installed",
+)
+class RealConverterFlowTest(unittest.TestCase):
+    setUp = ConvertFlowTest.setUp
+    tearDown = ConvertFlowTest.tearDown
+    _client = ConvertFlowTest._client
+    _upload = ConvertFlowTest._upload
+    _wait_for_job = ConvertFlowTest._wait_for_job
+
+    def test_real_converter_produces_a_viewer_resource(self) -> None:
+        client = self._client(PotreeConverterProcessor())
+        point_cloud_id = self._upload(client)
+
+        job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
+        job = self._wait_for_job(client, job_id)
+
+        self.assertEqual("succeeded", job["state"], job)
+        self.assertTrue(
+            (self.root / "converted" / point_cloud_id / "metadata.json").is_file()
+        )
 
 
 if __name__ == "__main__":

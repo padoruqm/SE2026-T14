@@ -5,10 +5,22 @@ import logging
 
 from app.core.errors import ConflictError, NotFoundError
 from app.jobs.store import Job, JobError, JobStore
-from app.processing.converter import ConversionError, Converter
+from app.processing import ProcessingContext, Processor
+from app.processing.errors import (
+    ProcessingInputError,
+    ProcessorExecutionError,
+    ProcessorTimeoutError,
+    ProcessorUnavailableError,
+)
 from app.storage.local import LocalDatasetStorage
 
 logger = logging.getLogger(__name__)
+
+_PROCESSOR_FAILURES = (
+    ProcessorExecutionError,
+    ProcessorTimeoutError,
+    ProcessorUnavailableError,
+)
 
 
 class ConvertJobRunner:
@@ -17,12 +29,12 @@ class ConvertJobRunner:
     def __init__(
         self,
         storage: LocalDatasetStorage,
-        converter: Converter,
+        processor: Processor,
         store: JobStore,
         workers: int = 1,
     ) -> None:
         self._storage = storage
-        self._converter = converter
+        self._processor = processor
         self._store = store
         self._slots = asyncio.Semaphore(workers)
         self._tasks: set[asyncio.Task[None]] = set()
@@ -49,11 +61,32 @@ class ConvertJobRunner:
             try:
                 source = self._storage.find(job.point_cloud_id)
                 if source is None:
-                    raise ConversionError("NOT_FOUND", "Point cloud not found")
-                await self._converter.convert(source, staging)
-                self._storage.publish_converted(job.point_cloud_id, staging)
-            except ConversionError as exc:
-                self._fail(job, exc.code, exc.message)
+                    self._fail(job, "NOT_FOUND", "Point cloud not found")
+                    return
+                # The processor is synchronous and needs a directory that does not exist yet.
+                context = ProcessingContext(
+                    input_path=source, output_directory=staging / "result"
+                )
+                result = await asyncio.get_running_loop().run_in_executor(
+                    None, self._processor.execute, context, {}
+                )
+                self._storage.publish_converted(
+                    job.point_cloud_id, result.output_directory
+                )
+            except ProcessingInputError as exc:
+                logger.warning("Rejected %s: %s", job.point_cloud_id, exc)
+                self._fail(
+                    job, "INVALID_POINT_CLOUD", "The point cloud could not be converted"
+                )
+            except _PROCESSOR_FAILURES as exc:
+                logger.error(
+                    "Conversion of %s failed: %s (exit code %s)\n%s",
+                    job.point_cloud_id,
+                    exc,
+                    getattr(exc, "return_code", None),
+                    getattr(exc, "stderr", None) or "",
+                )
+                self._fail(job, "INTERNAL_ERROR", "The point cloud conversion failed")
             except Exception:
                 logger.exception("Conversion of %s failed", job.point_cloud_id)
                 self._fail(job, "INTERNAL_ERROR", "The conversion failed unexpectedly")
