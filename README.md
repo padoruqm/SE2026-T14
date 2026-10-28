@@ -106,6 +106,14 @@ npm run build
   - `frontend/Dockerfile` chưa chạy `fetch-potree.sh`. Cần thêm bước này khi viewer được dùng trong Compose.
 - **Khi nào đổi hướng:** nếu sau này phải bỏ global hoặc Potree 1.8.2 gặp lỗi không sửa được thì cân nhắc [`potree-core`](https://www.npmjs.com/package/potree-core) (ESM, bundle được bằng Vite). Đổi lại, nhóm phải tự làm công cụ đo và cắt mà Potree 1.8.2 đã có sẵn cho S2/S3.
 
+## Điều khiển viewer (S2-Q1)
+
+Trang `/viewer/:id` mount viewer Potree qua `ViewerCanvas.vue` và có thanh điều khiển `ViewerControls.vue`:
+
+- Camera: kéo chuột trái để xoay, chuột phải để pan, lăn chuột để zoom (orbit controls mặc định của Potree); nút **Reset view** đưa camera về toàn bộ point cloud.
+- **Point size** và **Color** (RGB, Elevation, Intensity) chỉ đổi material của point cloud đã nạp, không convert hay tải lại dữ liệu.
+- Viewer nạp `/api/pointcloud/:id/viewer/metadata.json`; cần chạy `./scripts/fetch-potree.sh` một lần để có `frontend/public/potree/`.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
