@@ -41,3 +41,20 @@ export function measureDistance(from: Vec3, to: Vec3): DistanceMeasurement {
     vertical: dz,
   }
 }
+
+/**
+ * Convert a point in a local frame, whose origin sits at `offset` in world
+ * coordinates, to world coordinates. Large survey coordinates are stored as small
+ * local values plus an offset so they keep precision in 32-bit GPU buffers.
+ */
+export function offsetToWorld(local: Vec3, offset: Vec3): Vec3 {
+  assertFinitePoint(local, 'local')
+  assertFinitePoint(offset, 'offset')
+  return { x: local.x + offset.x, y: local.y + offset.y, z: local.z + offset.z }
+}
+
+export function worldToOffset(world: Vec3, offset: Vec3): Vec3 {
+  assertFinitePoint(world, 'world')
+  assertFinitePoint(offset, 'offset')
+  return { x: world.x - offset.x, y: world.y - offset.y, z: world.z - offset.z }
+}
