@@ -5,6 +5,8 @@ import { createMemoryHistory } from 'vue-router'
 import App from '../App.vue'
 import { createAppRouter } from '../router'
 
+vi.mock('@/features/viewer/checkWebGL', () => ({ checkWebGL: vi.fn<() => boolean>(() => true) }))
+
 async function mountAt(path: string) {
   const router = createAppRouter(createMemoryHistory())
   await router.push(path)
@@ -40,7 +42,7 @@ describe('app routing', () => {
     const { wrapper } = await mountAt('/viewer/abc')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Loading metadata')
+    expect(wrapper.text()).toContain('Loading point cloud')
     expect(new URL((fetchMock.mock.calls[0]![0] as Request).url).pathname).toBe(
       '/api/pointcloud/abc',
     )
