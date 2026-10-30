@@ -1,5 +1,6 @@
 import { onScopeDispose, ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 
+import { mapError, type ErrorKind } from '@/api/errorMapper'
 import { getPointCloud, type PointCloudDetail } from '@/api/generated'
 import { apiBaseUrl } from '@/shared/config'
 
@@ -28,6 +29,7 @@ export function usePointCloudMetadata(id: MaybeRefOrGetter<string>) {
   const state = ref<MetadataState>('loading')
   const pointCloud = ref<PointCloudDetail | null>(null)
   const error = ref<string | null>(null)
+  const errorKind = ref<ErrorKind | null>(null)
 
   let controller: AbortController | null = null
 
@@ -38,6 +40,7 @@ export function usePointCloudMetadata(id: MaybeRefOrGetter<string>) {
     state.value = 'loading'
     pointCloud.value = null
     error.value = null
+    errorKind.value = null
 
     try {
       const result = await getPointCloud({
@@ -48,25 +51,26 @@ export function usePointCloudMetadata(id: MaybeRefOrGetter<string>) {
       if (current.signal.aborted) return
 
       if (result.data === undefined) {
-        fail(errorMessage(result.error))
+        fail(errorMessage(result.error), mapError(result.error).kind)
         return
       }
       pointCloud.value = result.data
       state.value = hasNoMetadata(result.data) ? 'empty' : 'ready'
     } catch (caught) {
       if (current.signal.aborted) return
-      fail(errorMessage(caught))
+      fail(errorMessage(caught), mapError(caught).kind)
     }
   }
 
-  function fail(message: string): void {
+  function fail(message: string, kind: ErrorKind): void {
     state.value = 'error'
     error.value = message
+    errorKind.value = kind
   }
 
   watch(() => toValue(id), load, { immediate: true })
 
   onScopeDispose(() => controller?.abort())
 
-  return { state, pointCloud, error, reload: load }
+  return { state, pointCloud, error, errorKind, reload: load }
 }
