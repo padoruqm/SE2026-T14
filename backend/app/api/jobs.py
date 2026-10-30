@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, status
 from pydantic import BaseModel
 
 from app.core.errors import ErrorResponse, NotFoundError
-from app.jobs.store import Job
+from app.jobs.store import Job, JobState
 
 router = APIRouter(prefix="/api")
 
@@ -23,7 +23,7 @@ class JobErrorResponse(BaseModel):
 class JobResponse(BaseModel):
     id: str
     type: str
-    state: str
+    state: JobState
     progress: int | None
     resultId: str | None
     error: JobErrorResponse | None
