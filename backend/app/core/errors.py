@@ -57,6 +57,18 @@ class InvalidPointCloudError(AppError):
     message = "The uploaded file is not a supported point cloud"
 
 
+class NotFoundError(AppError):
+    status_code = 404
+    code = "NOT_FOUND"
+    message = "The requested resource was not found"
+
+
+class ConflictError(AppError):
+    status_code = 409
+    code = "CONFLICT"
+    message = "The request conflicts with the current state of the resource"
+
+
 _HTTP_STATUS_CODES = {
     400: "BAD_REQUEST",
     404: "NOT_FOUND",
