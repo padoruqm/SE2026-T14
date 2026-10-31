@@ -139,6 +139,16 @@ Muốn xem response lỗi từ mock, gửi header `Prefer: code=404` (hoặc mã
 3. Cài hook local theo [hướng dẫn hook](scripts/README.md), rồi tạo commit Conventional Commit nhỏ.
 4. Mở Draft PR sớm, tự review diff, chờ CI và một approval.
 
+## Dữ liệu point cloud mẫu
+
+Tạo fixture LAS tổng hợp để thử upload/viewer mà không tải dữ liệu ngoài hoặc commit file point cloud:
+
+```bash
+python scripts/generate-sample-las.py
+```
+
+File `data/sample/demo.las` có 5 điểm, CRS EPSG:32648 và kích thước dưới 1 KB; dùng `--output <path>` để chọn đường dẫn khác. File LAS/LAZ được Git-ignore. Xem [scripts/README.md](scripts/README.md) để biết cách kiểm tra fixture.
+
 ## Cấu trúc
 
 ```text
