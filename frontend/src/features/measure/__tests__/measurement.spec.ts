@@ -138,6 +138,20 @@ describe('distance across frames', () => {
     expect(world).toBeCloseTo(local, 9)
   })
 
+  it('matches the verified PotreeConverter world-coordinate example', () => {
+    const offset = { x: 500001.25, y: 2000002.5, z: 100.75 }
+    const a = { x: 0, y: 0, z: 0 }
+    const b = { x: 3, y: 4, z: 12 }
+
+    const result = measureDistance(offsetToWorld(a, offset), offsetToWorld(b, offset))
+
+    expect(result.from).toEqual({ x: 500001.25, y: 2000002.5, z: 100.75 })
+    expect(result.to).toEqual({ x: 500004.25, y: 2000006.5, z: 112.75 })
+    expect(result.distance).toBe(13)
+    expect(result.horizontal).toBe(5)
+    expect(result.vertical).toBe(12)
+  })
+
   it('keeps the horizontal and vertical parts when moved to world coordinates', () => {
     const offset = { x: 1234567.5, y: 7654321.25, z: -50 }
     const a = { x: 0, y: 0, z: 0 }
