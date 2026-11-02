@@ -112,6 +112,25 @@ npm run build
   - `frontend/Dockerfile` chưa chạy `fetch-potree.sh`. Cần thêm bước này khi viewer được dùng trong Compose.
 - **Khi nào đổi hướng:** nếu sau này phải bỏ global hoặc Potree 1.8.2 gặp lỗi không sửa được thì cân nhắc [`potree-core`](https://www.npmjs.com/package/potree-core) (ESM, bundle được bằng Vite). Đổi lại, nhóm phải tự làm công cụ đo và cắt mà Potree 1.8.2 đã có sẵn cho S2/S3.
 
+## Spike #25: Tọa độ viewer → world
+
+**Kết luận:** với output PotreeConverter 2.1.1 và Potree 1.8.2, điểm trong octree ở local frame; transform `matrixWorld` của point cloud đưa điểm về world frame. `Potree.Utils.getMousePointCloudIntersection()` trả `location` đã được chuyển sang world frame, vì vậy không cộng offset lần nữa vào kết quả pick.
+
+Với một điểm LAS có tọa độ nguyên `r`, scale `s` và header offset `h`:
+
+```text
+p_las   = r * s + h
+p_local = p_las - o
+p_world = M_cloud_world * (p_local, 1)
+```
+
+`o` là `offset` trong `metadata.json` của PotreeConverter, không nhất thiết bằng LAS header offset. Với point cloud chỉ có translation và không có parent transform, công thức tương đương `p_world = p_local + o`.
+
+- **CRS:** fixture dùng GeoTIFF VLR (record 34735) khai báo `EPSG:32648` — WGS 84 / UTM zone 48N, đơn vị mét. Backend đọc CRS này từ LAS upload metadata. `metadata.json` do converter tạo có `projection` rỗng, kể cả khi chạy với `--projection`; viewer không tự reprojection và không thể lấy CRS từ output Potree này. Giữ CRS từ metadata dataset riêng, không suy ra CRS chỉ từ tọa độ.
+- **Ví dụ kiểm chứng:** fixture có scale `(0.01, 0.01, 0.01)`, LAS header offset `(500000, 2000000, 100)` và hai điểm nguyên `(125, 250, 75)`, `(425, 650, 1275)`. Tọa độ LAS/world lần lượt là `(500001.25, 2000002.5, 100.75)` và `(500004.25, 2000006.5, 112.75)`. Converter ghi `offset = (500001.25, 2000002.5, 100.75)`; Potree nạp hai điểm local `(0, 0, 0)` và `(3, 4, 12)`, đặt translation của `matrixWorld` bằng offset đó, rồi pick trả tọa độ world như trên. Khoảng cách là `13 m` (ngang `5 m`, đứng `12 m`).
+- **Cách xác minh:** chuyển fixture bằng PotreeConverter 2.1.1, nạp `metadata.json` bằng Potree 1.8.2 trong Vite, rồi so sánh `pointcloud.position`/`matrixWorld` và các position trong octree với tọa độ đã biết. `measurement.spec.ts` kiểm tra phép cộng/trừ offset và tính bất biến của khoảng cách; `test_las_metadata.py` kiểm tra việc đọc EPSG từ GeoTIFF VLR.
+- **Lưu ý:** converter metadata có thể pad `boundingBox`; không dùng góc bounding box để kết luận tọa độ điểm cực đại. Ví dụ trên lấy vị trí thực từ position attribute của octree.
+
 ## Điều khiển viewer (S2-Q1)
 
 Trang `/viewer/:id` mount viewer Potree qua `ViewerCanvas.vue` và có thanh điều khiển `ViewerControls.vue`:
