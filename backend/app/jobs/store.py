@@ -1,9 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from uuid import uuid4
 
-ACTIVE_STATES = frozenset({"queued", "running"})
+
+class JobState(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+_ALLOWED_TRANSITIONS = {
+    JobState.QUEUED: frozenset({JobState.RUNNING, JobState.CANCELLED}),
+    JobState.RUNNING: frozenset(
+        {JobState.SUCCEEDED, JobState.FAILED, JobState.CANCELLED}
+    ),
+    JobState.SUCCEEDED: frozenset(),
+    JobState.FAILED: frozenset(),
+    JobState.CANCELLED: frozenset(),
+}
+ACTIVE_STATES = frozenset({JobState.QUEUED, JobState.RUNNING})
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,10 +36,38 @@ class Job:
     id: str
     type: str
     point_cloud_id: str
-    state: str = "queued"
+    state: JobState = JobState.QUEUED
     progress: int | None = None
     result_id: str | None = None
     error: JobError | None = None
+
+    def transition_to(
+        self,
+        state: JobState,
+        *,
+        progress: int | None = None,
+        result_id: str | None = None,
+        error: JobError | None = None,
+    ) -> None:
+        if state not in _ALLOWED_TRANSITIONS[self.state]:
+            raise ValueError(f"Cannot transition a {self.state} job to {state}")
+        if progress is not None and not 0 <= progress <= 100:
+            raise ValueError("Job progress must be between 0 and 100")
+        if state is JobState.SUCCEEDED and (
+            progress != 100 or result_id is None or error is not None
+        ):
+            raise ValueError("A successful job requires a complete result")
+        if state is JobState.FAILED and (error is None or result_id is not None):
+            raise ValueError("A failed job requires an error and no result")
+        if state in {JobState.QUEUED, JobState.RUNNING} and (
+            result_id is not None or error is not None
+        ):
+            raise ValueError("An active job cannot have a result or error")
+
+        self.state = state
+        self.progress = progress
+        self.result_id = result_id
+        self.error = error
 
 
 class JobStore:

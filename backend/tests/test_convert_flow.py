@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import shutil
+import struct
 import tempfile
+import threading
 import time
 import unittest
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -18,6 +21,14 @@ from app.storage.local import LocalDatasetStorage
 from las_fixtures import build_las
 
 LAS_BYTES = build_las()
+
+
+def build_las_with_points() -> bytes:
+    points = b"".join(
+        struct.pack("<iiiHBBbBHd", x, y, z, 100, 0x09, 2, 0, 0, 0, 0.0)
+        for x, y, z in ((100, 100, 0), (200, 200, 100))
+    )
+    return build_las(payload=points)
 
 
 class RecordingProcessor:
@@ -38,6 +49,21 @@ class RecordingProcessor:
         metadata = context.output_directory / "metadata.json"
         metadata.write_text("{}", encoding="utf-8")
         return ProcessingResult(context.output_directory, metadata)
+
+
+class BlockingProcessor(RecordingProcessor):
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def execute(
+        self, context: ProcessingContext, parameters: Mapping[str, object]
+    ) -> ProcessingResult:
+        self.started.set()
+        if not self.release.wait(timeout=5):
+            raise TimeoutError("test processor was not released")
+        return super().execute(context, parameters)
 
 
 class ConvertFlowTest(unittest.TestCase):
@@ -75,13 +101,17 @@ class ConvertFlowTest(unittest.TestCase):
         client = self._client(processor)
         point_cloud_id = self._upload(client)
 
-        response = client.post(f"/api/pointcloud/{point_cloud_id}/convert")
+        with self.assertLogs("app.jobs.runner", level="INFO") as captured:
+            response = client.post(f"/api/pointcloud/{point_cloud_id}/convert")
+            self.assertEqual(202, response.status_code)
+            accepted = response.json()
+            self.assertTrue(accepted["id"].startswith("job_"))
+            self.assertEqual("convert", accepted["type"])
+            job = self._wait_for_job(client, accepted["id"])
 
-        self.assertEqual(202, response.status_code)
-        accepted = response.json()
-        self.assertTrue(accepted["id"].startswith("job_"))
-        self.assertEqual("convert", accepted["type"])
-        job = self._wait_for_job(client, accepted["id"])
+        self.assertTrue(
+            any(record.job_id == accepted["id"] for record in captured.records)
+        )
         self.assertEqual("succeeded", job["state"])
         self.assertEqual(100, job["progress"])
         self.assertEqual(point_cloud_id, job["resultId"])
@@ -91,6 +121,31 @@ class ConvertFlowTest(unittest.TestCase):
         )
         self.assertTrue((self.root / "converted" / point_cloud_id / "metadata.json").is_file())
         self.assertEqual([], [p for p in (self.root / "converted").iterdir() if p.name.startswith(".")])
+
+    def test_synchronous_processor_does_not_block_job_api_requests(self) -> None:
+        processor = BlockingProcessor()
+        client = self._client(processor)
+        point_cloud_id = self._upload(client)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            convert = executor.submit(
+                client.post, f"/api/pointcloud/{point_cloud_id}/convert"
+            )
+            try:
+                self.assertTrue(processor.started.wait(timeout=2))
+                response = convert.result(timeout=2)
+                self.assertEqual(202, response.status_code)
+                job_id = response.json()["id"]
+
+                status_response = executor.submit(
+                    client.get, f"/api/job/{job_id}"
+                ).result(timeout=2)
+                self.assertEqual(200, status_response.status_code)
+                self.assertEqual("running", status_response.json()["state"])
+            finally:
+                processor.release.set()
+
+        self.assertEqual("succeeded", self._wait_for_job(client, job_id)["state"])
 
     def test_failed_conversion_reports_the_error_and_leaves_no_result(self) -> None:
         processor = RecordingProcessor(ProcessingInputError("not a LAS file"))
@@ -111,12 +166,16 @@ class ConvertFlowTest(unittest.TestCase):
         )
         point_cloud_id = self._upload(client)
 
-        job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
-        job = self._wait_for_job(client, job_id)
+        with self.assertLogs("app.jobs.runner", level="ERROR") as captured:
+            job_id = client.post(
+                f"/api/pointcloud/{point_cloud_id}/convert"
+            ).json()["id"]
+            job = self._wait_for_job(client, job_id)
 
         self.assertEqual("failed", job["state"])
         self.assertEqual("INTERNAL_ERROR", job["error"]["code"])
         self.assertNotIn("stderr text", str(job))
+        self.assertTrue(any(record.job_id == job_id for record in captured.records))
 
     def test_unexpected_converter_error_hides_internal_details(self) -> None:
         client = self._client(RecordingProcessor(RuntimeError("/secret/path")))
@@ -231,7 +290,12 @@ class RealConverterFlowTest(unittest.TestCase):
 
     def test_real_converter_produces_a_viewer_resource(self) -> None:
         client = self._client(PotreeConverterProcessor())
-        point_cloud_id = self._upload(client)
+        response = client.post(
+            "/api/upload",
+            files={"file": ("converter-test.las", build_las_with_points())},
+        )
+        self.assertEqual(201, response.status_code)
+        point_cloud_id = response.json()["id"]
 
         job_id = client.post(f"/api/pointcloud/{point_cloud_id}/convert").json()["id"]
         job = self._wait_for_job(client, job_id)

@@ -67,6 +67,12 @@ class OpenApiContractTest(unittest.TestCase):
 
         self.assertEqual(_properties(contract), _properties(implemented))
 
+    def test_job_states_match_the_contract(self) -> None:
+        contract = self.spec["components"]["schemas"]["JobState"]["enum"]
+        implemented = self.implemented["components"]["schemas"]["JobState"]["enum"]
+
+        self.assertEqual(contract, implemented)
+
     def test_point_cloud_response_has_the_contract_fields(self) -> None:
         contract = self.spec["components"]["schemas"]["PointCloud"]
         implemented = self.implemented["components"]["schemas"]["PointCloudResponse"]
