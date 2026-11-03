@@ -41,6 +41,14 @@ class Job:
     result_id: str | None = None
     error: JobError | None = None
 
+    def report_progress(self, progress: int) -> None:
+        if self.state is not JobState.RUNNING:
+            raise ValueError("Only a running job can report progress")
+        if not 0 <= progress <= 99:
+            raise ValueError("Active job progress must be between 0 and 99")
+        if self.progress is None or progress > self.progress:
+            self.progress = progress
+
     def transition_to(
         self,
         state: JobState,

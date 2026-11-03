@@ -71,6 +71,8 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 
 Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
+PotreeConverter báo phần trăm tiến độ trong lúc xử lý; backend đưa giá trị đó vào `Job.progress` để UI polling hiển thị. Giá trị `100` chỉ xuất hiện khi kết quả đã được publish thành công; `null` vẫn được dùng nếu processor không cung cấp tiến độ đo được.
+
 Có thể xem tài liệu tương tác tại `http://127.0.0.1:8000/docs`.
 
 ## Chạy frontend

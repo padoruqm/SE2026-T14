@@ -4,7 +4,9 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import threading
 import unittest
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,6 +18,48 @@ from app.processing.errors import (
     ProcessorUnavailableError,
 )
 from app.processing.potree_converter import PotreeConverterProcessor
+
+
+class FakeProcess:
+    def __init__(self, output: str = "", return_code: int = 0) -> None:
+        self.stdout = StringIO(output)
+        self.return_code = return_code
+
+    def poll(self) -> int:
+        return self.return_code
+
+    def wait(self, timeout: float | None = None) -> int:
+        return self.return_code
+
+    def kill(self) -> None:
+        self.return_code = -9
+
+
+class BlockingOutput:
+    def __init__(self, release: threading.Event) -> None:
+        self.release = release
+
+    def __iter__(self):
+        self.release.wait(timeout=2)
+        return iter(())
+
+    def close(self) -> None:
+        self.release.set()
+
+
+class BlockingProcess(FakeProcess):
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+        self.stdout = BlockingOutput(self.release)
+
+    def wait(self, timeout: float | None = None) -> int:
+        self.release.set()
+        return super().wait(timeout)
+
+    def kill(self) -> None:
+        self.release.set()
+        super().kill()
 
 
 def _write_las_fixture(path: Path) -> None:
@@ -84,23 +128,36 @@ class PotreeConverterProcessorTest(unittest.TestCase):
             self.processor.input_schema,
         )
 
-    def test_runs_converter_with_argument_list_and_timeout(self) -> None:
+    def test_runs_converter_with_argument_list_and_reports_progress(self) -> None:
+        progress: list[int] = []
+
         def complete_conversion(command, **kwargs):
             Path(command[3], "metadata.json").write_text("{}", encoding="utf-8")
-            return_value = subprocess.CompletedProcess(command, 0, "", "")
             self.assertEqual("PotreeConverter", Path(command[0]).name)
             self.assertEqual(str(self.input_path.resolve()), command[1])
             self.assertEqual(["-o", str(self.output_directory.resolve())], command[2:])
-            self.assertEqual(12, kwargs["timeout"])
-            self.assertFalse(kwargs["check"])
+            self.assertIs(subprocess.PIPE, kwargs["stdout"])
+            self.assertIs(subprocess.STDOUT, kwargs["stderr"])
+            self.assertTrue(kwargs["text"])
             self.assertIsInstance(command, list)
-            return return_value
+            return FakeProcess(
+                "[0.0%, 1.0s], [chunking: 0.0%]\n"
+                "[42.8%, 2.0s], [chunking: 50.0%]\n"
+                "conversion finished\n"
+            )
 
         with patch(
-            "app.processing.potree_converter.subprocess.run",
+            "app.processing.potree_converter.subprocess.Popen",
             side_effect=complete_conversion,
         ):
-            result = self.processor.execute(self._context(), {})
+            result = self.processor.execute(
+                ProcessingContext(
+                    self.input_path,
+                    self.output_directory,
+                    progress_callback=progress.append,
+                ),
+                {},
+            )
 
         self.assertEqual(
             ProcessingResult(
@@ -109,6 +166,32 @@ class PotreeConverterProcessorTest(unittest.TestCase):
             ),
             result,
         )
+        self.assertEqual([0, 42], progress)
+
+    def test_ignores_unrecognized_progress_output_and_never_reports_100_early(self) -> None:
+        progress: list[int] = []
+
+        def complete_conversion(command, **kwargs):
+            Path(command[3], "metadata.json").write_text("{}", encoding="utf-8")
+            return FakeProcess(
+                "starting conversion\n"
+                "[100.0%, 2.0s], [indexing: 100.0%]\n"
+            )
+
+        with patch(
+            "app.processing.potree_converter.subprocess.Popen",
+            side_effect=complete_conversion,
+        ):
+            self.processor.execute(
+                ProcessingContext(
+                    self.input_path,
+                    self.output_directory,
+                    progress_callback=progress.append,
+                ),
+                {},
+            )
+
+        self.assertEqual([99], progress)
 
     def test_rejects_non_las_input(self) -> None:
         laz_path = self.root / "sample.laz"
@@ -139,7 +222,7 @@ class PotreeConverterProcessorTest(unittest.TestCase):
 
     def test_reports_missing_executable_and_removes_partial_output(self) -> None:
         with patch(
-            "app.processing.potree_converter.subprocess.run",
+            "app.processing.potree_converter.subprocess.Popen",
             side_effect=FileNotFoundError,
         ):
             with self.assertRaises(ProcessorUnavailableError):
@@ -148,9 +231,10 @@ class PotreeConverterProcessorTest(unittest.TestCase):
         self.assertFalse(self.output_directory.exists())
 
     def test_reports_timeout_and_removes_partial_output(self) -> None:
+        self.processor._timeout_seconds = 0.01
         with patch(
-            "app.processing.potree_converter.subprocess.run",
-            side_effect=subprocess.TimeoutExpired("PotreeConverter", 12),
+            "app.processing.potree_converter.subprocess.Popen",
+            return_value=BlockingProcess(),
         ):
             with self.assertRaises(ProcessorTimeoutError):
                 self.processor.execute(self._context(), {})
@@ -159,8 +243,8 @@ class PotreeConverterProcessorTest(unittest.TestCase):
 
     def test_reports_nonzero_exit_code_and_removes_partial_output(self) -> None:
         with patch(
-            "app.processing.potree_converter.subprocess.run",
-            return_value=subprocess.CompletedProcess([], 7, "", "failed"),
+            "app.processing.potree_converter.subprocess.Popen",
+            return_value=FakeProcess("failed\n", 7),
         ):
             with self.assertRaises(ProcessorExecutionError) as raised:
                 self.processor.execute(self._context(), {})
@@ -170,8 +254,8 @@ class PotreeConverterProcessorTest(unittest.TestCase):
 
     def test_requires_converter_metadata_output(self) -> None:
         with patch(
-            "app.processing.potree_converter.subprocess.run",
-            return_value=subprocess.CompletedProcess([], 0, "", ""),
+            "app.processing.potree_converter.subprocess.Popen",
+            return_value=FakeProcess(),
         ):
             with self.assertRaises(ProcessorExecutionError):
                 self.processor.execute(self._context(), {})

@@ -73,6 +73,21 @@ class JobStateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             job.transition_to(JobState.RUNNING, progress=101)
 
+    def test_running_job_reports_monotonic_progress_below_completion(self) -> None:
+        job = self._job()
+
+        with self.assertRaises(ValueError):
+            job.report_progress(10)
+
+        job.transition_to(JobState.RUNNING)
+        job.report_progress(42)
+        job.report_progress(20)
+        job.report_progress(99)
+
+        self.assertEqual(99, job.progress)
+        with self.assertRaises(ValueError):
+            job.report_progress(100)
+
     def test_job_store_detects_queued_and_running_jobs_as_active(self) -> None:
         store = JobStore()
         job = store.create("convert", "pc_test")
