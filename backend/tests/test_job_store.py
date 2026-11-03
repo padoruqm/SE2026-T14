@@ -55,6 +55,14 @@ class JobStateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             job.transition_to(JobState.QUEUED)
 
+    def test_succeeded_job_cannot_go_back_to_running(self) -> None:
+        job = self._job()
+        job.transition_to(JobState.RUNNING)
+        job.transition_to(JobState.SUCCEEDED, progress=100, result_id="pc_test")
+
+        with self.assertRaises(ValueError):
+            job.transition_to(JobState.RUNNING)
+
     def test_terminal_job_cannot_transition_again(self) -> None:
         job = self._job()
         job.transition_to(
