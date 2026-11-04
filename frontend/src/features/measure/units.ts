@@ -25,3 +25,8 @@ export function distanceUnit(crs: string | null): DistanceUnit {
   }
   return { label: 'units', geographic: false }
 }
+
+/** A length for display: three decimals and the unit of the CRS. */
+export function formatLength(value: number, crs: string | null): string {
+  return `${value.toFixed(3)} ${distanceUnit(crs).label}`
+}

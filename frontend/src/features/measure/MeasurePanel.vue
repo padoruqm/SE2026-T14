@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, useTemplateRef, watch } from 'vue'
 
-import { distanceUnit } from './units'
+import { distanceUnit, formatLength } from './units'
 import type { DistanceMeasurement, Vec3 } from './measurement'
 
 const props = defineProps<{
@@ -29,7 +29,7 @@ function axis(value: number): string {
 }
 
 function length(value: number): string {
-  return `${value.toFixed(3)} ${unit.value.label}`
+  return formatLength(value, props.crs)
 }
 
 function point(p: Vec3): string {
