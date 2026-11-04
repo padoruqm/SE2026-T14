@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from pathlib import Path
+from typing import Any
 
 _DATASET_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,8}")
@@ -23,6 +25,7 @@ class LocalDatasetStorage:
     def __init__(self, root: Path, max_upload_bytes: int) -> None:
         self._upload_root = root / "uploads"
         self._converted_root = root / "converted"
+        self._record_root = root / "metadata"
         self._max_upload_bytes = max_upload_bytes
 
     async def save(
@@ -69,6 +72,50 @@ class LocalDatasetStorage:
             ):
                 return candidate
         return None
+
+    def discard_upload(self, dataset_id: str) -> None:
+        """Delete the stored upload for `dataset_id`; unknown ids are ignored."""
+        upload = self.find(dataset_id)
+        if upload is not None:
+            upload.unlink(missing_ok=True)
+
+    def write_record(self, dataset_id: str, record: Mapping[str, Any]) -> None:
+        """Store small JSON metadata for a dataset, replacing any earlier record.
+
+        Records live in their own directory, not next to the uploads, because
+        `find` matches every `<id>.*` file in the upload directory.
+        """
+        if not _DATASET_ID.fullmatch(dataset_id):
+            raise InvalidStorageKeyError("Invalid dataset id")
+
+        self._record_root.mkdir(parents=True, exist_ok=True)
+        destination = self._record_root / f"{dataset_id}.json"
+        partial = self._record_root / f"{dataset_id}.json.part"
+        if destination.is_symlink() or partial.is_symlink():
+            raise InvalidStorageKeyError("Refusing to write through a symbolic link")
+
+        try:
+            partial.write_text(json.dumps(record), encoding="utf-8")
+            partial.replace(destination)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+
+    def read_record(self, dataset_id: str) -> dict[str, Any] | None:
+        """Return the record for `dataset_id`, or None if there is none.
+
+        A record that exists but cannot be parsed raises ValueError: that is a
+        damaged store, not a missing dataset.
+        """
+        if not _DATASET_ID.fullmatch(dataset_id):
+            return None
+        path = self._record_root / f"{dataset_id}.json"
+        if path.is_symlink() or not path.is_file():
+            return None
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(record, dict):
+            raise ValueError("Dataset record is not a JSON object")
+        return record
 
     def has_converted(self, dataset_id: str) -> bool:
         return (self._converted_root / dataset_id).is_dir()
