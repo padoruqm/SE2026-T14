@@ -87,6 +87,22 @@ class JobStateTest(unittest.TestCase):
         )
         self.assertFalse(store.has_active("convert", "pc_test"))
 
+    def test_latest_returns_the_newest_job_of_that_type_for_the_point_cloud(self) -> None:
+        store = JobStore()
+        store.create("convert", "pc_a")
+        newest = store.create("convert", "pc_a")
+        store.create("convert", "pc_b")
+        store.create("crop", "pc_a")
+
+        self.assertIs(newest, store.latest("convert", "pc_a"))
+
+    def test_latest_is_none_when_there_is_no_matching_job(self) -> None:
+        store = JobStore()
+        store.create("convert", "pc_a")
+
+        self.assertIsNone(store.latest("convert", "pc_other"))
+        self.assertIsNone(store.latest("crop", "pc_a"))
+
     def test_runner_rejects_nonpositive_worker_count(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             storage = LocalDatasetStorage(Path(temporary_directory), 1024)
