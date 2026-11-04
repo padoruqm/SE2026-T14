@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -116,6 +117,27 @@ class LocalDatasetStorage:
         if not isinstance(record, dict):
             raise ValueError("Dataset record is not a JSON object")
         return record
+
+    def converted_file(self, dataset_id: str, relative_path: str) -> Path | None:
+        """Return a regular file inside the converted result, or None.
+
+        Anything that could leave the result directory, a path with a null byte,
+        or a symbolic link anywhere on the way counts as not found.
+        """
+        if not _DATASET_ID.fullmatch(dataset_id) or "\0" in relative_path:
+            return None
+        result = self._converted_root / dataset_id
+        if result.is_symlink() or not result.is_dir():
+            return None
+
+        candidate = result / relative_path
+        if os.path.realpath(candidate) != os.path.normpath(os.path.abspath(candidate)):
+            return None
+        if not Path(os.path.normpath(os.path.abspath(candidate))).is_relative_to(
+            result.resolve()
+        ):
+            return None
+        return candidate if candidate.is_file() else None
 
     def has_converted(self, dataset_id: str) -> bool:
         return (self._converted_root / dataset_id).is_dir()
