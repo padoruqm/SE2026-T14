@@ -19,6 +19,8 @@ tags:
     description: Point cloud resources, metadata and conversion
   - name: jobs
     description: Long-running processing jobs
+  - name: drafts
+    description: Per-dataset viewer settings with transactional revision checks
 
 paths:
   /api/upload:
@@ -203,6 +205,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/pointcloud/{dataset_id}/draft:
+    parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [drafts]
+      operationId: getViewerDraft
+      summary: Restore viewer settings; an unsaved dataset starts at revision zero
+      responses:
+        "200":
+          description: Current draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewerDraft"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: Draft storage unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [drafts]
+      operationId: saveViewerDraft
+      summary: Save only against the current revision; exact retries replay their original ack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveViewerDraft"
+      responses:
+        "200":
+          description: Accepted save or original acknowledgement for an exact retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewerDraft"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+        "503":
+          description: Draft storage unavailable; no successful save acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   parameters:
     PointCloudId:
@@ -215,6 +273,41 @@ components:
       example: pc_8f3a1c
 
   schemas:
+    ViewerState:
+      type: object
+      additionalProperties: false
+      required: [pointSize, colorMode]
+      properties:
+        pointSize:
+          type: number
+          minimum: 1
+          maximum: 5
+          multipleOf: 0.5
+        colorMode:
+          type: string
+          enum: [rgb, elevation, intensity]
+    ViewerDraft:
+      type: object
+      required: [revision, state]
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        state:
+          $ref: "#/components/schemas/ViewerState"
+    SaveViewerDraft:
+      type: object
+      additionalProperties: false
+      required: [expectedRevision, operationId, state]
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 0
+        operationId:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{1,64}$"
+        state:
+          $ref: "#/components/schemas/ViewerState"
     PointCloud:
       type: object
       required: [id, filename, status, metadata]

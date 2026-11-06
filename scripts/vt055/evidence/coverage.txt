@@ -1,0 +1,6 @@
+Name                                   Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------
+backend/app/api/viewer_drafts.py          43      0      2      0   100%
+backend/app/storage/viewer_drafts.py      54      0      8      0   100%
+----------------------------------------------------------------------------------
+TOTAL                                     97      0     10      0   100%

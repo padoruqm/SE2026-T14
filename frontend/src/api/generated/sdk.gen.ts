@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
+import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, GetViewerDraftData, GetViewerDraftErrors, GetViewerDraftResponses, SaveViewerDraftData, SaveViewerDraftErrors, SaveViewerDraftResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -59,3 +59,20 @@ export const convertPointCloud = <ThrowOnError extends boolean = false>(options:
  * Get the state of a job
  */
 export const getJob = <ThrowOnError extends boolean = false>(options: Options<GetJobData, ThrowOnError>): RequestResult<GetJobResponses, GetJobErrors, ThrowOnError> => (options.client ?? client).get<GetJobResponses, GetJobErrors, ThrowOnError>({ url: '/api/job/{id}', ...options });
+
+/**
+ * Restore viewer settings; an unsaved dataset starts at revision zero
+ */
+export const getViewerDraft = <ThrowOnError extends boolean = false>(options: Options<GetViewerDraftData, ThrowOnError>): RequestResult<GetViewerDraftResponses, GetViewerDraftErrors, ThrowOnError> => (options.client ?? client).get<GetViewerDraftResponses, GetViewerDraftErrors, ThrowOnError>({ url: '/api/pointcloud/{dataset_id}/draft', ...options });
+
+/**
+ * Save only against the current revision; exact retries replay their original ack
+ */
+export const saveViewerDraft = <ThrowOnError extends boolean = false>(options: Options<SaveViewerDraftData, ThrowOnError>): RequestResult<SaveViewerDraftResponses, SaveViewerDraftErrors, ThrowOnError> => (options.client ?? client).put<SaveViewerDraftResponses, SaveViewerDraftErrors, ThrowOnError>({
+    url: '/api/pointcloud/{dataset_id}/draft',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

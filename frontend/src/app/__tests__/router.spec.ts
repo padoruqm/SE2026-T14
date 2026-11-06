@@ -41,8 +41,10 @@ describe('app routing', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Loading metadata')
-    expect(new URL((fetchMock.mock.calls[0]![0] as Request).url).pathname).toBe(
-      '/api/pointcloud/abc',
+    const requestedPaths = fetchMock.mock.calls.map(
+      ([input]) => new URL(input instanceof Request ? input.url : String(input)).pathname,
     )
+    expect(requestedPaths).toContain('/api/pointcloud/abc')
+    expect(requestedPaths).toContain('/api/pointcloud/abc/draft')
   })
 })

@@ -71,6 +71,12 @@ class ViewerDraftApiTest(unittest.TestCase):
         self.assertEqual(200, late_replay.status_code)
         self.assertEqual(original.json(), late_replay.json())
         self.assert_current(2, OLDER)
+        with TestClient(create_app(self.settings)) as restarted:
+            replay_after_restart = restarted.put(self.path, json={
+                "expectedRevision": 0, "operationId": "edit-1", "state": NEWER,
+            })
+            self.assertEqual(original.json(), replay_after_restart.json())
+            self.assertEqual({"revision": 2, "state": OLDER}, restarted.get(self.path).json())
 
     def test_T05_operation_id_cannot_be_reused_for_different_content(self):
         self.assertEqual(200, self.save().status_code)
@@ -157,6 +163,14 @@ class ViewerDraftApiTest(unittest.TestCase):
         self.assertEqual(200, other.status_code)
         self.assertEqual(1, other.json()["revision"])
         self.assert_current(1, NEWER)
+
+    def test_T25_unavailable_database_cannot_be_reported_as_loaded_or_saved(self):
+        database = self.root / "viewer-drafts.sqlite3"
+        database.unlink()
+        database.mkdir()
+        for response in (self.client.get(self.path), self.save()):
+            self.assertEqual(503, response.status_code, response.text)
+            self.assertNotIn(str(self.root), response.text)
 
 
 if __name__ == "__main__":

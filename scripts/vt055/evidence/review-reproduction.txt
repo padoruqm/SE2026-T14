@@ -1,0 +1,29 @@
+
+ RUN  v4.1.11 /home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/frontend
+
+ ❯ src/features/viewer/__tests__/useViewerDraft.spec.ts (10 tests | 1 failed) 15ms
+     × T23 never reports saved when a successful acknowledgement mismatches the command 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/viewer/__tests__/useViewerDraft.spec.ts > viewer draft: requirement-derived UI contracts > T23 never reports saved when a successful acknowledgement mismatches the command
+AssertionError: expected 'saved' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "saved"
+
+ ❯ src/features/viewer/__tests__/useViewerDraft.spec.ts:47:32
+     45|     draft.pointSize.value = 3
+     46|     await vi.advanceTimersByTimeAsync(300)
+     47|     expect(draft.status.value).toBe('error')
+       |                                ^
+     48|     expect(draft.pointSize.value).toBe(3)
+     49|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  20:54:46
+   Duration  463ms (transform 35ms, setup 0ms, import 75ms, tests 15ms, environment 296ms)

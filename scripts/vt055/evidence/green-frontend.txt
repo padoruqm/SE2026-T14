@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/frontend
+
+
+ Test Files  13 passed (13)
+      Tests  93 passed (93)
+   Start at  21:00:37
+   Duration  5.33s (transform 304ms, setup 0ms, import 680ms, tests 211ms, environment 3.57s)

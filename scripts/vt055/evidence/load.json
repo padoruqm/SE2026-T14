@@ -1,0 +1,30 @@
+{
+  "concurrency": 60,
+  "independent_writes": {
+    "requests": 180,
+    "p50_ms": 111.581,
+    "p95_ms": 192.402,
+    "max_ms": 204.71
+  },
+  "same_base_race": {
+    "requests": 60,
+    "p50_ms": 111.48,
+    "p95_ms": 191.547,
+    "max_ms": 204.49,
+    "success": 1,
+    "conflicts": 59
+  },
+  "same_operation_retries": {
+    "requests": 60,
+    "p50_ms": 110.126,
+    "p95_ms": 183.374,
+    "max_ms": 206.002,
+    "acknowledgements": 60,
+    "revision_advances": 1
+  },
+  "target_p95_ms": 2000,
+  "python": "3.12.11",
+  "platform": "Linux-7.0.0-42-generic-x86_64-with-glibc2.43",
+  "scope": "single uvicorn process, real loopback TCP and local SQLite/WAL; small viewer-settings JSON; excludes WAN, upload/conversion and 3D rendering",
+  "target_met_in_this_run": true
+}

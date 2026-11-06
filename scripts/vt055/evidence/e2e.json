@@ -1,0 +1,16 @@
+{
+  "restore_after_reload": "pass",
+  "lost_ack_exact_retry": "pass",
+  "two_tabs_stale_save": "pass",
+  "local_conflict_edits_preserved": "pass",
+  "explicit_load_latest": "pass",
+  "final_server_draft": {
+    "revision": 3,
+    "state": {
+      "pointSize": 4.0,
+      "colorMode": "elevation"
+    }
+  },
+  "browser": "153.0.8010.12",
+  "scope": "real built Vue/HTTP/SQLite; Potree assets and 3D rendering excluded"
+}

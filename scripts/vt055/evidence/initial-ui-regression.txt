@@ -1,0 +1,25 @@
+
+ RUN  v4.1.11 /home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/frontend
+
+ ❯ src/app/__tests__/router.spec.ts (3 tests | 1 failed) 32ms
+     × requests the metadata of the dataset shown in the viewer 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/__tests__/router.spec.ts > app routing > requests the metadata of the dataset shown in the viewer
+TypeError: Invalid URL
+ ❯ src/app/__tests__/router.spec.ts:44:12
+     42|
+     43|     expect(wrapper.text()).toContain('Loading metadata')
+     44|     expect(new URL((fetchMock.mock.calls[0]![0] as Request).url).pathn…
+       |            ^
+     45|       '/api/pointcloud/abc',
+     46|     )
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 12 passed (13)
+      Tests  1 failed | 90 passed (91)
+   Start at  20:52:13
+   Duration  5.94s (transform 336ms, setup 0ms, import 739ms, tests 245ms, environment 4.02s)

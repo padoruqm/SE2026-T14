@@ -37,6 +37,7 @@ data/uploads/
 data/results/
 data/cache/
 data/tmp/
+data/runtime/
 *.las
 *.laz
 *.copc.laz

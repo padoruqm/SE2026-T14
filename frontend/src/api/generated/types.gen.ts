@@ -4,6 +4,22 @@ export type ClientOptions = {
     baseUrl: 'http://127.0.0.1:8000' | 'http://127.0.0.1:4010' | (string & {});
 };
 
+export type ViewerState = {
+    pointSize: number;
+    colorMode: 'rgb' | 'elevation' | 'intensity';
+};
+
+export type ViewerDraft = {
+    revision: number;
+    state: ViewerState;
+};
+
+export type SaveViewerDraft = {
+    expectedRevision: number;
+    operationId: string;
+    state: ViewerState;
+};
+
 export type PointCloud = {
     /**
      * Opaque ID; clients must not derive paths from it
@@ -240,3 +256,73 @@ export type GetJobResponses = {
 };
 
 export type GetJobResponse = GetJobResponses[keyof GetJobResponses];
+
+export type GetViewerDraftData = {
+    body?: never;
+    path: {
+        dataset_id: string;
+    };
+    query?: never;
+    url: '/api/pointcloud/{dataset_id}/draft';
+};
+
+export type GetViewerDraftErrors = {
+    /**
+     * The resource does not exist
+     */
+    404: ErrorResponse;
+    /**
+     * Draft storage unavailable
+     */
+    503: ErrorResponse;
+};
+
+export type GetViewerDraftError = GetViewerDraftErrors[keyof GetViewerDraftErrors];
+
+export type GetViewerDraftResponses = {
+    /**
+     * Current draft
+     */
+    200: ViewerDraft;
+};
+
+export type GetViewerDraftResponse = GetViewerDraftResponses[keyof GetViewerDraftResponses];
+
+export type SaveViewerDraftData = {
+    body: SaveViewerDraft;
+    path: {
+        dataset_id: string;
+    };
+    query?: never;
+    url: '/api/pointcloud/{dataset_id}/draft';
+};
+
+export type SaveViewerDraftErrors = {
+    /**
+     * The resource does not exist
+     */
+    404: ErrorResponse;
+    /**
+     * The resource is not in a state that allows this request
+     */
+    409: ErrorResponse;
+    /**
+     * The request or the point cloud data is invalid
+     */
+    422: ErrorResponse;
+    /**
+     * Draft storage unavailable; no successful save acknowledged
+     */
+    503: ErrorResponse;
+};
+
+export type SaveViewerDraftError = SaveViewerDraftErrors[keyof SaveViewerDraftErrors];
+
+export type SaveViewerDraftResponses = {
+    /**
+     * Accepted save or original acknowledgement for an exact retry
+     */
+    200: ViewerDraft;
+};
+
+export type SaveViewerDraftResponse = SaveViewerDraftResponses[keyof SaveViewerDraftResponses];

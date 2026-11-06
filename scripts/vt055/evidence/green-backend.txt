@@ -1,0 +1,173 @@
+/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_convert_rejects_ids_that_escape_the_upload_folder (test_convert_flow.ConvertFlowTest.test_convert_rejects_ids_that_escape_the_upload_folder) ... ok
+test_convert_unknown_point_cloud_returns_not_found (test_convert_flow.ConvertFlowTest.test_convert_unknown_point_cloud_returns_not_found) ... ok
+test_failed_conversion_reports_the_error_and_leaves_no_result (test_convert_flow.ConvertFlowTest.test_failed_conversion_reports_the_error_and_leaves_no_result) ... Conversion job rejected its input: not a LAS file
+Conversion job failed with code INVALID_POINT_CLOUD
+ok
+test_get_unknown_job_returns_not_found (test_convert_flow.ConvertFlowTest.test_get_unknown_job_returns_not_found) ... ok
+test_processor_crash_is_an_internal_error_not_an_invalid_file (test_convert_flow.ConvertFlowTest.test_processor_crash_is_an_internal_error_not_an_invalid_file) ... ok
+test_rejected_upload_creates_nothing_to_convert (test_convert_flow.ConvertFlowTest.test_rejected_upload_creates_nothing_to_convert) ... ok
+test_second_convert_conflicts_unless_forced (test_convert_flow.ConvertFlowTest.test_second_convert_conflicts_unless_forced) ... ok
+test_synchronous_processor_does_not_block_job_api_requests (test_convert_flow.ConvertFlowTest.test_synchronous_processor_does_not_block_job_api_requests) ... ok
+test_unexpected_converter_error_hides_internal_details (test_convert_flow.ConvertFlowTest.test_unexpected_converter_error_hides_internal_details) ... Conversion job failed unexpectedly
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/app/jobs/runner.py", line 80, in _run
+    result = await asyncio.get_running_loop().run_in_executor(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.pyenv/versions/3.12.11/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_convert_flow.py", line 47, in execute
+    raise self.error
+RuntimeError: /secret/path
+Conversion job failed with code INTERNAL_ERROR
+ok
+test_uploaded_file_converts_end_to_end (test_convert_flow.ConvertFlowTest.test_uploaded_file_converts_end_to_end) ... ok
+test_failed_publish_keeps_the_old_result (test_convert_flow.PublishConvertedTest.test_failed_publish_keeps_the_old_result) ... ok
+test_publish_replaces_the_old_result_and_leaves_nothing_behind (test_convert_flow.PublishConvertedTest.test_publish_replaces_the_old_result_and_leaves_nothing_behind) ... ok
+test_real_converter_produces_a_viewer_resource (test_convert_flow.RealConverterFlowTest.test_real_converter_produces_a_viewer_resource) ... skipped 'PotreeConverter is not installed'
+test_header_split_across_the_signature_is_still_validated (test_dataset_service.DatasetServiceStreamingTest.test_header_split_across_the_signature_is_still_validated) ... ok
+test_reads_metadata_when_the_header_arrives_in_tiny_chunks (test_dataset_service.DatasetServiceStreamingTest.test_reads_metadata_when_the_header_arrives_in_tiny_chunks) ... ok
+test_stream_ending_inside_the_header_is_rejected (test_dataset_service.DatasetServiceStreamingTest.test_stream_ending_inside_the_header_is_rejected) ... ok
+test_invalid_signature_leaves_no_file_behind (test_datasets_api.UploadApiTest.test_invalid_signature_leaves_no_file_behind) ... ok
+test_missing_file_field_returns_validation_error (test_datasets_api.UploadApiTest.test_missing_file_field_returns_validation_error) ... ok
+test_rejects_a_file_with_a_valid_signature_but_truncated_header (test_datasets_api.UploadApiTest.test_rejects_a_file_with_a_valid_signature_but_truncated_header) ... ok
+test_rejects_a_header_with_inverted_bounds (test_datasets_api.UploadApiTest.test_rejects_a_header_with_inverted_bounds) ... ok
+test_rejects_empty_file (test_datasets_api.UploadApiTest.test_rejects_empty_file) ... ok
+test_rejects_file_shorter_than_signature (test_datasets_api.UploadApiTest.test_rejects_file_shorter_than_signature) ... ok
+test_rejects_invalid_las_signature (test_datasets_api.UploadApiTest.test_rejects_invalid_las_signature) ... ok
+test_rejects_unsupported_extension (test_datasets_api.UploadApiTest.test_rejects_unsupported_extension) ... ok
+test_rejects_upload_over_limit_without_leaving_partial_file (test_datasets_api.UploadApiTest.test_rejects_upload_over_limit_without_leaving_partial_file) ... ok
+test_unexpected_error_hides_internal_details (test_datasets_api.UploadApiTest.test_unexpected_error_hides_internal_details) ... Unhandled error request_id=req_b24d9d6603944df1b7445bbe974fe990
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 203, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/app/core/errors.py", line 115, in attach_request_id
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 179, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/routing.py", line 683, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 2811, in app
+    await route.handle(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 1330, in handle
+    await super().handle(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/routing.py", line 289, in handle
+    await self.app(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 166, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 152, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 745, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 372, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_datasets_api.py", line 152, in boom
+    raise RuntimeError("/secret/server/path")
+RuntimeError: /secret/server/path
+ok
+test_unknown_route_uses_shared_error_schema (test_datasets_api.UploadApiTest.test_unknown_route_uses_shared_error_schema) ... ok
+test_upload_returns_created_point_cloud_resource (test_datasets_api.UploadApiTest.test_upload_returns_created_point_cloud_resource) ... ok
+test_upload_returns_the_crs_declared_in_the_header (test_datasets_api.UploadApiTest.test_upload_returns_the_crs_declared_in_the_header) ... ok
+test_upload_stores_file_bytes (test_datasets_api.UploadApiTest.test_upload_stores_file_bytes) ... ok
+test_upload_stores_the_file_under_a_server_generated_name (test_datasets_api.UploadApiTest.test_upload_stores_the_file_under_a_server_generated_name) ... ok
+test_upload_strips_client_path_from_filename (test_datasets_api.UploadApiTest.test_upload_strips_client_path_from_filename) ... ok
+test_failed_job_requires_an_error_and_has_no_result (test_job_store.JobStateTest.test_failed_job_requires_an_error_and_has_no_result) ... ok
+test_job_follows_queued_running_succeeded_transitions (test_job_store.JobStateTest.test_job_follows_queued_running_succeeded_transitions) ... ok
+test_job_rejects_invalid_progress_and_incomplete_success (test_job_store.JobStateTest.test_job_rejects_invalid_progress_and_incomplete_success) ... ok
+test_job_rejects_skipped_and_reversed_transitions (test_job_store.JobStateTest.test_job_rejects_skipped_and_reversed_transitions) ... ok
+test_job_store_detects_queued_and_running_jobs_as_active (test_job_store.JobStateTest.test_job_store_detects_queued_and_running_jobs_as_active) ... ok
+test_runner_rejects_nonpositive_worker_count (test_job_store.JobStateTest.test_runner_rejects_nonpositive_worker_count) ... ok
+test_terminal_job_cannot_transition_again (test_job_store.JobStateTest.test_terminal_job_cannot_transition_again) ... ok
+test_falls_back_to_a_geographic_epsg_code (test_las_metadata.ParseLasMetadataTest.test_falls_back_to_a_geographic_epsg_code) ... ok
+test_ignores_user_defined_crs_codes (test_las_metadata.ParseLasMetadataTest.test_ignores_user_defined_crs_codes) ... ok
+test_ignores_vlrs_from_other_users (test_las_metadata.ParseLasMetadataTest.test_ignores_vlrs_from_other_users) ... ok
+test_reads_epsg_from_a_wkt_record (test_las_metadata.ParseLasMetadataTest.test_reads_epsg_from_a_wkt_record) ... ok
+test_reads_epsg_from_the_geotiff_key_directory (test_las_metadata.ParseLasMetadataTest.test_reads_epsg_from_the_geotiff_key_directory) ... ok
+test_reads_point_count_and_bounds_from_a_1_2_header (test_las_metadata.ParseLasMetadataTest.test_reads_point_count_and_bounds_from_a_1_2_header) ... ok
+test_reads_the_64_bit_point_count_of_a_1_4_header (test_las_metadata.ParseLasMetadataTest.test_reads_the_64_bit_point_count_of_a_1_4_header) ... ok
+test_rejects_a_truncated_header (test_las_metadata.ParseLasMetadataTest.test_rejects_a_truncated_header) ... ok
+test_rejects_a_wrong_signature (test_las_metadata.ParseLasMetadataTest.test_rejects_a_wrong_signature) ... ok
+test_rejects_inverted_bounds (test_las_metadata.ParseLasMetadataTest.test_rejects_inverted_bounds) ... ok
+test_rejects_non_finite_bounds (test_las_metadata.ParseLasMetadataTest.test_rejects_non_finite_bounds) ... ok
+test_caps_the_amount_of_data_buffered_for_vlrs (test_las_metadata.RequiredHeadLengthTest.test_caps_the_amount_of_data_buffered_for_vlrs) ... ok
+test_covers_the_header_and_its_vlrs (test_las_metadata.RequiredHeadLengthTest.test_covers_the_header_and_its_vlrs) ... ok
+test_rejects_an_implausible_header_size (test_las_metadata.RequiredHeadLengthTest.test_rejects_an_implausible_header_size) ... ok
+test_a_failed_upload_keeps_the_previous_file_with_that_id (test_local_storage.LocalDatasetStorageTest.test_a_failed_upload_keeps_the_previous_file_with_that_id) ... ok
+test_accepts_a_file_of_exactly_the_limit (test_local_storage.LocalDatasetStorageTest.test_accepts_a_file_of_exactly_the_limit) ... ok
+test_creates_the_upload_directory_on_first_use (test_local_storage.LocalDatasetStorageTest.test_creates_the_upload_directory_on_first_use) ... ok
+test_does_not_write_through_a_symlinked_partial_file (test_local_storage.LocalDatasetStorageTest.test_does_not_write_through_a_symlinked_partial_file) ... ok
+test_error_messages_do_not_contain_filesystem_paths (test_local_storage.LocalDatasetStorageTest.test_error_messages_do_not_contain_filesystem_paths) ... ok
+test_never_writes_outside_the_upload_directory (test_local_storage.LocalDatasetStorageTest.test_never_writes_outside_the_upload_directory) ... ok
+test_rejects_a_file_over_the_limit_and_removes_the_partial_file (test_local_storage.LocalDatasetStorageTest.test_rejects_a_file_over_the_limit_and_removes_the_partial_file) ... ok
+test_rejects_a_symlinked_destination (test_local_storage.LocalDatasetStorageTest.test_rejects_a_symlinked_destination) ... ok
+test_rejects_dataset_ids_that_could_leave_the_upload_directory (test_local_storage.LocalDatasetStorageTest.test_rejects_dataset_ids_that_could_leave_the_upload_directory) ... ok
+test_rejects_suffixes_that_are_not_a_plain_extension (test_local_storage.LocalDatasetStorageTest.test_rejects_suffixes_that_are_not_a_plain_extension) ... ok
+test_removes_the_partial_file_when_the_stream_fails (test_local_storage.LocalDatasetStorageTest.test_removes_the_partial_file_when_the_stream_fails) ... ok
+test_removes_the_partial_file_when_the_upload_is_cancelled (test_local_storage.LocalDatasetStorageTest.test_removes_the_partial_file_when_the_upload_is_cancelled) ... ok
+test_saves_chunks_in_order_and_reports_the_size (test_local_storage.LocalDatasetStorageTest.test_saves_chunks_in_order_and_reports_the_size) ... ok
+test_convert_and_job_routes_match_the_contract (test_openapi_contract.OpenApiContractTest.test_convert_and_job_routes_match_the_contract) ... ok
+test_error_envelope_matches_the_contract (test_openapi_contract.OpenApiContractTest.test_error_envelope_matches_the_contract) ... ok
+test_every_backend_error_code_is_in_the_contract (test_openapi_contract.OpenApiContractTest.test_every_backend_error_code_is_in_the_contract) ... ok
+test_job_response_has_the_contract_fields (test_openapi_contract.OpenApiContractTest.test_job_response_has_the_contract_fields) ... ok
+test_job_states_match_the_contract (test_openapi_contract.OpenApiContractTest.test_job_states_match_the_contract) ... ok
+test_point_cloud_response_has_the_contract_fields (test_openapi_contract.OpenApiContractTest.test_point_cloud_response_has_the_contract_fields) ... ok
+test_upload_declares_the_same_success_and_error_statuses (test_openapi_contract.OpenApiContractTest.test_upload_declares_the_same_success_and_error_statuses) ... ok
+test_upload_route_is_documented_in_the_contract (test_openapi_contract.OpenApiContractTest.test_upload_route_is_documented_in_the_contract) ... ok
+test_converter_implements_processing_interface (test_potree_converter.PotreeConverterProcessorTest.test_converter_implements_processing_interface) ... ok
+test_converts_a_minimal_las_fixture (test_potree_converter.PotreeConverterProcessorTest.test_converts_a_minimal_las_fixture) ... skipped 'PotreeConverter is not installed'
+test_rejects_existing_output_directory (test_potree_converter.PotreeConverterProcessorTest.test_rejects_existing_output_directory) ... ok
+test_rejects_missing_input (test_potree_converter.PotreeConverterProcessorTest.test_rejects_missing_input) ... ok
+test_rejects_non_las_input (test_potree_converter.PotreeConverterProcessorTest.test_rejects_non_las_input) ... ok
+test_rejects_parameters_not_declared_by_processor_schema (test_potree_converter.PotreeConverterProcessorTest.test_rejects_parameters_not_declared_by_processor_schema) ... ok
+test_reports_missing_executable_and_removes_partial_output (test_potree_converter.PotreeConverterProcessorTest.test_reports_missing_executable_and_removes_partial_output) ... ok
+test_reports_nonzero_exit_code_and_removes_partial_output (test_potree_converter.PotreeConverterProcessorTest.test_reports_nonzero_exit_code_and_removes_partial_output) ... ok
+test_reports_timeout_and_removes_partial_output (test_potree_converter.PotreeConverterProcessorTest.test_reports_timeout_and_removes_partial_output) ... ok
+test_requires_converter_metadata_output (test_potree_converter.PotreeConverterProcessorTest.test_requires_converter_metadata_output) ... ok
+test_runs_converter_with_argument_list_and_timeout (test_potree_converter.PotreeConverterProcessorTest.test_runs_converter_with_argument_list_and_timeout) ... ok
+test_generates_a_small_las_with_known_bounds_and_crs (test_sample_data_script.GenerateSampleLasTest.test_generates_a_small_las_with_known_bounds_and_crs) ... ok
+test_generation_is_deterministic (test_sample_data_script.GenerateSampleLasTest.test_generation_is_deterministic) ... ok
+test_T01_new_draft_has_contract_defaults (test_viewer_drafts.ViewerDraftApiTest.test_T01_new_draft_has_contract_defaults) ... ok
+test_T02_save_restores_exact_state_after_application_restart (test_viewer_drafts.ViewerDraftApiTest.test_T02_save_restores_exact_state_after_application_restart) ... ok
+test_T03_delayed_stale_save_cannot_replace_newer_data (test_viewer_drafts.ViewerDraftApiTest.test_T03_delayed_stale_save_cannot_replace_newer_data) ... ok
+test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback (test_viewer_drafts.ViewerDraftApiTest.test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback) ... ok
+test_T05_operation_id_cannot_be_reused_for_different_content (test_viewer_drafts.ViewerDraftApiTest.test_T05_operation_id_cannot_be_reused_for_different_content) ... ok
+test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) ... ok
+test_T07_unknown_color_mode_is_rejected_without_write (test_viewer_drafts.ViewerDraftApiTest.test_T07_unknown_color_mode_is_rejected_without_write) ... ok
+test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) ... ok
+test_T09_unknown_dataset_returns_404 (test_viewer_drafts.ViewerDraftApiTest.test_T09_unknown_dataset_returns_404) ... ok
+test_T10_storage_failure_rolls_back_without_success_acknowledgement (test_viewer_drafts.ViewerDraftApiTest.test_T10_storage_failure_rolls_back_without_success_acknowledgement) ... ok
+test_T11_two_writers_on_same_revision_have_exactly_one_winner (test_viewer_drafts.ViewerDraftApiTest.test_T11_two_writers_on_same_revision_have_exactly_one_winner) ... ok
+test_T12_simultaneous_retries_create_one_revision (test_viewer_drafts.ViewerDraftApiTest.test_T12_simultaneous_retries_create_one_revision) ... ok
+test_T13_future_revision_on_new_draft_is_conflict (test_viewer_drafts.ViewerDraftApiTest.test_T13_future_revision_on_new_draft_is_conflict) ... ok
+test_T14_datasets_have_independent_revision_and_operation_spaces (test_viewer_drafts.ViewerDraftApiTest.test_T14_datasets_have_independent_revision_and_operation_spaces) ... ok
+test_T25_unavailable_database_cannot_be_reported_as_loaded_or_saved (test_viewer_drafts.ViewerDraftApiTest.test_T25_unavailable_database_cannot_be_reported_as_loaded_or_saved) ... ok
+
+----------------------------------------------------------------------
+Ran 102 tests in 1.181s
+
+OK (skipped=2)

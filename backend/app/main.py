@@ -4,12 +4,14 @@ from fastapi import FastAPI
 
 from app.api.datasets import router as datasets_router
 from app.api.jobs import router as jobs_router
+from app.api.viewer_drafts import router as viewer_drafts_router
 from app.core.config import Settings
 from app.core.errors import register_error_handlers
 from app.jobs.runner import ConvertJobRunner
 from app.jobs.store import JobStore
 from app.processing import PotreeConverterProcessor, Processor
 from app.storage.local import LocalDatasetStorage
+from app.storage.viewer_drafts import ViewerDraftStore
 
 
 def create_app(
@@ -22,6 +24,9 @@ def create_app(
         max_upload_bytes=resolved_settings.max_upload_bytes,
     )
     app.state.job_store = JobStore()
+    app.state.viewer_drafts = ViewerDraftStore(
+        resolved_settings.storage_root / "viewer-drafts.sqlite3"
+    )
     app.state.jobs = ConvertJobRunner(
         storage=app.state.storage,
         processor=processor
@@ -35,6 +40,7 @@ def create_app(
     register_error_handlers(app)
     app.include_router(datasets_router)
     app.include_router(jobs_router)
+    app.include_router(viewer_drafts_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
