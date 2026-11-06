@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
+import threading
+import time
 from collections.abc import Mapping
+from queue import Empty, Queue
 from pathlib import Path
+from typing import TextIO
 
-from app.processing.base import ProcessingContext, ProcessingResult, Processor
+from app.processing.base import (
+    ProcessingContext,
+    ProcessingResult,
+    ProgressCallback,
+    Processor,
+)
 from app.processing.errors import (
     ProcessingInputError,
     ProcessorExecutionError,
@@ -16,6 +26,97 @@ from app.processing.errors import (
 
 
 _STDERR_LIMIT = 2000
+_PROGRESS_PATTERN = re.compile(r"^\s*\[\s*(\d+(?:\.\d+)?)%\s*,")
+_OUTPUT_POLL_SECONDS = 0.1
+
+
+def _progress_from_output(line: str) -> int | None:
+    match = _PROGRESS_PATTERN.match(line)
+    if match is None:
+        return None
+    return min(99, int(float(match.group(1))))
+
+
+def _read_output(stream: TextIO, lines: Queue[str | OSError | None]) -> None:
+    try:
+        for line in stream:
+            lines.put(line)
+    except OSError as exc:
+        lines.put(exc)
+    finally:
+        stream.close()
+        lines.put(None)
+
+
+def _stop_process(process: subprocess.Popen[str], reader: threading.Thread) -> None:
+    try:
+        process.kill()
+    except ProcessLookupError:
+        pass
+    process.wait()
+    reader.join()
+
+
+def _run_converter(
+    command: list[str],
+    timeout_seconds: float,
+    progress_callback: ProgressCallback | None,
+) -> tuple[int, str]:
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
+    )
+
+    if process.stdout is None:
+        process.kill()
+        process.wait()
+        raise ProcessorExecutionError("PotreeConverter output could not be read")
+
+    lines: Queue[str | OSError | None] = Queue()
+    reader = threading.Thread(target=_read_output, args=(process.stdout, lines), daemon=True)
+    reader.start()
+    deadline = time.monotonic() + timeout_seconds
+    output_tail = ""
+
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            _stop_process(process, reader)
+            raise ProcessorTimeoutError("PotreeConverter exceeded its time limit")
+
+        try:
+            line = lines.get(timeout=min(remaining, _OUTPUT_POLL_SECONDS))
+        except Empty:
+            if process.poll() is not None and not reader.is_alive():
+                break
+            continue
+
+        if line is None:
+            break
+        if isinstance(line, OSError):
+            _stop_process(process, reader)
+            raise ProcessorExecutionError(
+                "PotreeConverter output could not be read",
+                stderr=output_tail,
+            ) from line
+        output_tail = (output_tail + line)[-_STDERR_LIMIT:]
+        progress = _progress_from_output(line)
+        if progress is not None and progress_callback is not None:
+            progress_callback(progress)
+
+    try:
+        return_code = process.wait(timeout=max(0, deadline - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        _stop_process(process, reader)
+        raise ProcessorTimeoutError("PotreeConverter exceeded its time limit") from None
+
+    reader.join()
+    return return_code, output_tail
 
 
 class PotreeConverterProcessor(Processor):
@@ -64,35 +165,34 @@ class PotreeConverterProcessor(Processor):
             str(output_directory),
         ]
         try:
-            completed = subprocess.run(
+            return_code, output = _run_converter(
                 command,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=self._timeout_seconds,
+                self._timeout_seconds,
+                context.progress_callback,
             )
         except FileNotFoundError as exc:
             shutil.rmtree(output_directory)
             raise ProcessorUnavailableError(
                 "PotreeConverter executable was not found"
             ) from exc
-        except subprocess.TimeoutExpired as exc:
+        except ProcessorTimeoutError:
             shutil.rmtree(output_directory)
-            raise ProcessorTimeoutError(
-                "PotreeConverter exceeded its time limit"
-            ) from exc
+            raise
+        except ProcessorExecutionError:
+            shutil.rmtree(output_directory)
+            raise
         except OSError as exc:
             shutil.rmtree(output_directory)
             raise ProcessorExecutionError(
                 "PotreeConverter could not be started"
             ) from exc
 
-        if completed.returncode != 0:
+        if return_code != 0:
             shutil.rmtree(output_directory)
             raise ProcessorExecutionError(
                 "PotreeConverter exited unsuccessfully",
-                return_code=completed.returncode,
-                stderr=(completed.stderr or "")[-_STDERR_LIMIT:],
+                return_code=return_code,
+                stderr=output,
             )
 
         metadata_path = output_directory / "metadata.json"
