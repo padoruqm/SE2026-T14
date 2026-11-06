@@ -141,6 +141,17 @@ Trang `/viewer/:id` mount viewer Potree qua `ViewerCanvas.vue` và có thanh đi
 - **Point size** và **Color** (RGB, Elevation, Intensity) chỉ đổi material của point cloud đã nạp, không convert hay tải lại dữ liệu.
 - Viewer nạp `/api/pointcloud/:id/viewer/metadata.json`; cần chạy `./scripts/fetch-potree.sh` một lần để có `frontend/public/potree/`.
 
+## Công cụ Measure (S2-D1)
+
+Trang `/viewer/:id` có nút **Measure**. Khi bật, con trỏ trên viewer thành chữ thập và một cú **click** (không kéo) chọn điểm point cloud dưới con trỏ; kéo chuột vẫn xoay/pan camera như bình thường.
+
+- Chọn **1 điểm**: panel hiển thị tọa độ world X/Y/Z.
+- Chọn **2 điểm**: panel hiển thị khoảng cách, phần ngang (XY) và phần đứng (Z), cùng tọa độ hai điểm; viewer vẽ marker, đường nối và nhãn. Điểm thứ 3 bắt đầu phép đo mới.
+- **Clear measurement** luôn hỏi xác nhận (**Delete** / **Keep**; focus bàn phím vào **Keep**). Trong lúc hỏi, click trên viewer bị bỏ qua. Công cụ chỉ đọc dữ liệu: không có request ghi nào được gửi.
+- Đơn vị lấy từ CRS của dataset: `m` cho UTM/Web Mercator, `units` nếu CRS không rõ. Với CRS địa lý (ví dụ EPSG:4326) tọa độ là độ nên panel từ chối hiển thị khoảng cách thẳng.
+
+Cách hoạt động: `potreeViewer.ts` là chỗ duy nhất gọi Potree. `enableMeasure` dùng `Potree.Utils.getMousePointCloudIntersection`; vị trí trả về đã nhân `matrixWorld` của point cloud nên là tọa độ world theo công thức ở phần spike #25. Phép tính khoảng cách nằm trong `features/measure/measurement.ts`; marker được chiếu về pixel bằng `projectToScreen` (tính bằng double, không qua buffer 32-bit) và đặt lại sau mỗi frame. Chỉ chọn điểm trên điểm point cloud, không nội suy giữa các điểm, nên độ chính xác phụ thuộc mật độ điểm và point budget.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
