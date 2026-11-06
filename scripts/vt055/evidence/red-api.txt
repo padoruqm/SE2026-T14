@@ -1,0 +1,253 @@
+/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_T01_new_draft_has_contract_defaults (test_viewer_drafts.ViewerDraftApiTest.test_T01_new_draft_has_contract_defaults) ... FAIL
+test_T02_save_restores_exact_state_after_application_restart (test_viewer_drafts.ViewerDraftApiTest.test_T02_save_restores_exact_state_after_application_restart) ... FAIL
+test_T03_delayed_stale_save_cannot_replace_newer_data (test_viewer_drafts.ViewerDraftApiTest.test_T03_delayed_stale_save_cannot_replace_newer_data) ... FAIL
+test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback (test_viewer_drafts.ViewerDraftApiTest.test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback) ... FAIL
+test_T05_operation_id_cannot_be_reused_for_different_content (test_viewer_drafts.ViewerDraftApiTest.test_T05_operation_id_cannot_be_reused_for_different_content) ... FAIL
+test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) ... 
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=0.5) ... FAIL
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=5.5) ... FAIL
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=1.25) ... FAIL
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size='NaN') ... FAIL
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size='Infinity') ... FAIL
+  test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=True) ... FAIL
+test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) ... FAIL
+test_T07_unknown_color_mode_is_rejected_without_write (test_viewer_drafts.ViewerDraftApiTest.test_T07_unknown_color_mode_is_rejected_without_write) ... FAIL
+test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) ... 
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=-1) ... FAIL
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=0.5) ... FAIL
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=True) ... FAIL
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='') ... FAIL
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='bad/key') ... FAIL
+  test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx') ... FAIL
+test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) ... FAIL
+test_T09_unknown_dataset_returns_404 (test_viewer_drafts.ViewerDraftApiTest.test_T09_unknown_dataset_returns_404) ... ok
+test_T10_storage_failure_rolls_back_without_success_acknowledgement (test_viewer_drafts.ViewerDraftApiTest.test_T10_storage_failure_rolls_back_without_success_acknowledgement) ... FAIL
+test_T11_two_writers_on_same_revision_have_exactly_one_winner (test_viewer_drafts.ViewerDraftApiTest.test_T11_two_writers_on_same_revision_have_exactly_one_winner) ... FAIL
+test_T12_simultaneous_retries_create_one_revision (test_viewer_drafts.ViewerDraftApiTest.test_T12_simultaneous_retries_create_one_revision) ... FAIL
+test_T13_future_revision_on_new_draft_is_conflict (test_viewer_drafts.ViewerDraftApiTest.test_T13_future_revision_on_new_draft_is_conflict) ... FAIL
+test_T14_datasets_have_independent_revision_and_operation_spaces (test_viewer_drafts.ViewerDraftApiTest.test_T14_datasets_have_independent_revision_and_operation_spaces) ... FAIL
+
+======================================================================
+FAIL: test_T01_new_draft_has_contract_defaults (test_viewer_drafts.ViewerDraftApiTest.test_T01_new_draft_has_contract_defaults)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 49, in test_T01_new_draft_has_contract_defaults
+    self.assert_current(0, DEFAULT)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 45, in assert_current
+    self.assertEqual(200, response.status_code, response.text)
+AssertionError: 200 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_6b3b86d9cf554c50af21add72c6aaf2e","details":{}}}
+
+======================================================================
+FAIL: test_T02_save_restores_exact_state_after_application_restart (test_viewer_drafts.ViewerDraftApiTest.test_T02_save_restores_exact_state_after_application_restart)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 53, in test_T02_save_restores_exact_state_after_application_restart
+    self.assertEqual(200, saved.status_code, saved.text)
+AssertionError: 200 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_8c39e6ef9c554ae59d39fd5d18418cb7","details":{}}}
+
+======================================================================
+FAIL: test_T03_delayed_stale_save_cannot_replace_newer_data (test_viewer_drafts.ViewerDraftApiTest.test_T03_delayed_stale_save_cannot_replace_newer_data)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 59, in test_T03_delayed_stale_save_cannot_replace_newer_data
+    self.assertEqual(200, self.save().status_code)
+AssertionError: 200 != 404
+
+======================================================================
+FAIL: test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback (test_viewer_drafts.ViewerDraftApiTest.test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 66, in test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback
+    self.assertEqual(200, original.status_code, original.text)
+AssertionError: 200 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_2efbd03b48d24c01aac216d8ae6a2597","details":{}}}
+
+======================================================================
+FAIL: test_T05_operation_id_cannot_be_reused_for_different_content (test_viewer_drafts.ViewerDraftApiTest.test_T05_operation_id_cannot_be_reused_for_different_content)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 76, in test_T05_operation_id_cannot_be_reused_for_different_content
+    self.assertEqual(200, self.save().status_code)
+AssertionError: 200 != 404
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=0.5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_883c8d0f73894280b16c20985a5736cf","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=5.5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_5017e04f320048aba1ef4e45e317cf2d","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=1.25)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_e329ed906dee4f619fb147ca9fd5bc7c","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size='NaN')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_7d8247c1b0d242bcb586a9d1f9b583b1","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size='Infinity')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_03eb4ca7405d452897363e53af13d3e5","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) (size=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 85, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assertEqual(422, response.status_code, response.text)
+AssertionError: 422 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_ffe399af1db24904bc6193533fac5b27","details":{}}}
+
+======================================================================
+FAIL: test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 86, in test_T06_point_size_boundaries_and_invalid_partitions
+    self.assert_current(0, DEFAULT)
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 45, in assert_current
+    self.assertEqual(200, response.status_code, response.text)
+AssertionError: 200 != 404 : {"error":{"code":"NOT_FOUND","message":"Not Found","requestId":"req_063ecc8a3a1748909159761a1a0c0747","details":{}}}
+
+======================================================================
+FAIL: test_T07_unknown_color_mode_is_rejected_without_write (test_viewer_drafts.ViewerDraftApiTest.test_T07_unknown_color_mode_is_rejected_without_write)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 93, in test_T07_unknown_color_mode_is_rejected_without_write
+    self.assertEqual(422, self.save(state={"pointSize": 2, "colorMode": "rainbow"}).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 99, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(base=base).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=0.5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 99, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(base=base).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (base=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 99, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(base=base).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 102, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(op=key).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='bad/key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 102, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(op=key).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) (key='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 102, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.save(op=key).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 104, in test_T08_invalid_revision_key_and_extra_fields_are_rejected
+    self.assertEqual(422, self.client.put(self.path, json=body).status_code)
+AssertionError: 422 != 404
+
+======================================================================
+FAIL: test_T10_storage_failure_rolls_back_without_success_acknowledgement (test_viewer_drafts.ViewerDraftApiTest.test_T10_storage_failure_rolls_back_without_success_acknowledgement)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 113, in test_T10_storage_failure_rolls_back_without_success_acknowledgement
+    self.assertEqual(200, self.save().status_code)
+AssertionError: 200 != 404
+
+======================================================================
+FAIL: test_T11_two_writers_on_same_revision_have_exactly_one_winner (test_viewer_drafts.ViewerDraftApiTest.test_T11_two_writers_on_same_revision_have_exactly_one_winner)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 139, in test_T11_two_writers_on_same_revision_have_exactly_one_winner
+    self.assertEqual([200, 409], sorted(r.status_code for r in responses))
+AssertionError: Lists differ: [200, 409] != [404, 404]
+
+First differing element 0:
+200
+404
+
+- [200, 409]
++ [404, 404]
+
+======================================================================
+FAIL: test_T12_simultaneous_retries_create_one_revision (test_viewer_drafts.ViewerDraftApiTest.test_T12_simultaneous_retries_create_one_revision)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 146, in test_T12_simultaneous_retries_create_one_revision
+    self.assertEqual([200, 200], [r.status_code for r in responses])
+AssertionError: Lists differ: [200, 200] != [404, 404]
+
+First differing element 0:
+200
+404
+
+- [200, 200]
++ [404, 404]
+
+======================================================================
+FAIL: test_T13_future_revision_on_new_draft_is_conflict (test_viewer_drafts.ViewerDraftApiTest.test_T13_future_revision_on_new_draft_is_conflict)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 151, in test_T13_future_revision_on_new_draft_is_conflict
+    self.assertEqual(409, self.save(base=1).status_code)
+AssertionError: 409 != 404
+
+======================================================================
+FAIL: test_T14_datasets_have_independent_revision_and_operation_spaces (test_viewer_drafts.ViewerDraftApiTest.test_T14_datasets_have_independent_revision_and_operation_spaces)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/backend/tests/test_viewer_drafts.py", line 155, in test_T14_datasets_have_independent_revision_and_operation_spaces
+    self.assertEqual(200, self.save().status_code)
+AssertionError: 200 != 404
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.122s
+
+FAILED (failures=25)
