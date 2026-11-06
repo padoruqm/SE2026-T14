@@ -1,0 +1,9 @@
+{
+  "baseline": "98af6b6ec4c73440b55be82f9971614f049bfca3",
+  "temporary_branch": "test/vt055-remove-guard-98af6b6-4717ac",
+  "mutation_commit": "b70247d2b8538341ccf071c105b3d1351fce41e9",
+  "mutation": "removed revision compare-and-swap guard; kept replay lookup",
+  "test_exit": 1,
+  "killed_by_T03_and_T11": true,
+  "submission_source_unchanged": true
+}

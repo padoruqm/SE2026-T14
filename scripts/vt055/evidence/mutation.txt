@@ -1,0 +1,57 @@
+/home/yuk/.codex/.chatgpt-projects/g-p-6ac5b30d795c819199c683bfaafa5a01/work/bt3-vt055/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_T01_new_draft_has_contract_defaults (test_viewer_drafts.ViewerDraftApiTest.test_T01_new_draft_has_contract_defaults) ... ok
+test_T02_save_restores_exact_state_after_application_restart (test_viewer_drafts.ViewerDraftApiTest.test_T02_save_restores_exact_state_after_application_restart) ... ok
+test_T03_delayed_stale_save_cannot_replace_newer_data (test_viewer_drafts.ViewerDraftApiTest.test_T03_delayed_stale_save_cannot_replace_newer_data) ... FAIL
+test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback (test_viewer_drafts.ViewerDraftApiTest.test_T04_duplicate_operation_and_old_replay_do_not_advance_or_rollback) ... ok
+test_T05_operation_id_cannot_be_reused_for_different_content (test_viewer_drafts.ViewerDraftApiTest.test_T05_operation_id_cannot_be_reused_for_different_content) ... ok
+test_T06_point_size_boundaries_and_invalid_partitions (test_viewer_drafts.ViewerDraftApiTest.test_T06_point_size_boundaries_and_invalid_partitions) ... ok
+test_T07_unknown_color_mode_is_rejected_without_write (test_viewer_drafts.ViewerDraftApiTest.test_T07_unknown_color_mode_is_rejected_without_write) ... ok
+test_T08_invalid_revision_key_and_extra_fields_are_rejected (test_viewer_drafts.ViewerDraftApiTest.test_T08_invalid_revision_key_and_extra_fields_are_rejected) ... ok
+test_T09_unknown_dataset_returns_404 (test_viewer_drafts.ViewerDraftApiTest.test_T09_unknown_dataset_returns_404) ... ok
+test_T10_storage_failure_rolls_back_without_success_acknowledgement (test_viewer_drafts.ViewerDraftApiTest.test_T10_storage_failure_rolls_back_without_success_acknowledgement) ... ok
+test_T11_two_writers_on_same_revision_have_exactly_one_winner (test_viewer_drafts.ViewerDraftApiTest.test_T11_two_writers_on_same_revision_have_exactly_one_winner) ... FAIL
+test_T12_simultaneous_retries_create_one_revision (test_viewer_drafts.ViewerDraftApiTest.test_T12_simultaneous_retries_create_one_revision) ... ok
+test_T13_future_revision_on_new_draft_is_conflict (test_viewer_drafts.ViewerDraftApiTest.test_T13_future_revision_on_new_draft_is_conflict) ... FAIL
+test_T14_datasets_have_independent_revision_and_operation_spaces (test_viewer_drafts.ViewerDraftApiTest.test_T14_datasets_have_independent_revision_and_operation_spaces) ... ok
+test_T25_unavailable_database_cannot_be_reported_as_loaded_or_saved (test_viewer_drafts.ViewerDraftApiTest.test_T25_unavailable_database_cannot_be_reported_as_loaded_or_saved) ... ok
+
+======================================================================
+FAIL: test_T03_delayed_stale_save_cannot_replace_newer_data (test_viewer_drafts.ViewerDraftApiTest.test_T03_delayed_stale_save_cannot_replace_newer_data)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/vt055-mutation-nzkppft4/repo/backend/tests/test_viewer_drafts.py", line 61, in test_T03_delayed_stale_save_cannot_replace_newer_data
+    self.assertEqual(409, stale.status_code, stale.text)
+AssertionError: 409 != 200 : {"revision":2,"state":{"pointSize":2.5,"colorMode":"intensity"}}
+
+======================================================================
+FAIL: test_T11_two_writers_on_same_revision_have_exactly_one_winner (test_viewer_drafts.ViewerDraftApiTest.test_T11_two_writers_on_same_revision_have_exactly_one_winner)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/vt055-mutation-nzkppft4/repo/backend/tests/test_viewer_drafts.py", line 145, in test_T11_two_writers_on_same_revision_have_exactly_one_winner
+    self.assertEqual([200, 409], sorted(r.status_code for r in responses))
+AssertionError: Lists differ: [200, 409] != [200, 200]
+
+First differing element 1:
+409
+200
+
+- [200, 409]
+?       ^ ^
+
++ [200, 200]
+?       ^ ^
+
+
+======================================================================
+FAIL: test_T13_future_revision_on_new_draft_is_conflict (test_viewer_drafts.ViewerDraftApiTest.test_T13_future_revision_on_new_draft_is_conflict)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/vt055-mutation-nzkppft4/repo/backend/tests/test_viewer_drafts.py", line 157, in test_T13_future_revision_on_new_draft_is_conflict
+    self.assertEqual(409, self.save(base=1).status_code)
+AssertionError: 409 != 200
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.254s
+
+FAILED (failures=3)

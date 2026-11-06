@@ -25,6 +25,9 @@ T23 now guards the public saved/error outcome, not helper calls or private stora
 60 concurrent tasks." The diff alone supplies no latency measurement. Treat it as
 a hypothesis for the real loopback HTTP experiment, not grounds to change DB or
 claim failure. The workload, p95 and limits are recorded in evidence/load.json.
+Observed result: 180 successful independent saves at concurrency 60 had p95
+192.402 ms; the two contention/retry workloads also stayed below 2000 ms. This
+rejects the categorical claim for this run, not every possible workload or host.
 
 ## Existing test design corrected during verification
 
