@@ -143,6 +143,8 @@ Trang `/viewer/:id` mount viewer Potree qua `ViewerCanvas.vue` và có thanh đi
 - **Point size** và **Color** (RGB, Elevation, Intensity) chỉ đổi material của point cloud đã nạp, không convert hay tải lại dữ liệu.
 - Viewer nạp `/api/pointcloud/:id/viewer/metadata.json`; cần chạy `./scripts/fetch-potree.sh` một lần để có `frontend/public/potree/`.
 
+Checklist thủ công cho viewer và Measure (kèm mẫu bản ghi bằng chứng) nằm ở [frontend/MANUAL_CHECKLIST.md](frontend/MANUAL_CHECKLIST.md).
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
