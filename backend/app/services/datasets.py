@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Mapping
+from dataclasses import asdict, dataclass
 from pathlib import PurePosixPath, PureWindowsPath
+from typing import Any
 from uuid import uuid4
 
 from app.core.errors import (
     FileTooLargeError,
     InvalidPointCloudError,
+    NotFoundError,
     UnsupportedFileTypeError,
 )
+from app.jobs.store import JobState, JobStore
 from app.services.las_metadata import (
     HEADER_PROBE_BYTES,
     LAS_SIGNATURE,
+    LasBounds,
     LasMetadata,
     parse_las_metadata,
     required_head_length,
@@ -61,9 +65,52 @@ class _HeaderInspector:
             raise InvalidPointCloudError()
 
 
+def _to_record(filename: str, metadata: LasMetadata) -> dict[str, object]:
+    return {
+        "filename": filename,
+        "point_count": metadata.point_count,
+        "bounds": asdict(metadata.bounds),
+        "crs": metadata.crs,
+    }
+
+
+def _from_record(record: Mapping[str, Any]) -> tuple[str, LasMetadata]:
+    return str(record["filename"]), LasMetadata(
+        point_count=int(record["point_count"]),
+        bounds=LasBounds(**record["bounds"]),
+        crs=record["crs"],
+    )
+
+
 class DatasetService:
-    def __init__(self, storage: LocalDatasetStorage) -> None:
+    def __init__(
+        self, storage: LocalDatasetStorage, job_store: JobStore | None = None
+    ) -> None:
         self._storage = storage
+        self._job_store = job_store
+
+    def get(self, dataset_id: str) -> StoredDataset:
+        record = self._storage.read_record(dataset_id)
+        if record is None:
+            raise NotFoundError("Point cloud not found")
+        filename, metadata = _from_record(record)
+        return StoredDataset(
+            id=dataset_id,
+            filename=filename,
+            status=self._status(dataset_id),
+            metadata=metadata,
+        )
+
+    def _status(self, dataset_id: str) -> str:
+        jobs = self._job_store
+        if jobs is not None and jobs.has_active("convert", dataset_id):
+            return "converting"
+        if self._storage.has_converted(dataset_id):
+            return "ready"
+        latest = jobs.latest("convert", dataset_id) if jobs is not None else None
+        if latest is not None and latest.state is JobState.FAILED:
+            return "failed"
+        return "uploaded"
 
     async def store_upload(
         self, filename: str, chunks: AsyncIterator[bytes]
@@ -82,6 +129,13 @@ class DatasetService:
 
         if inspector.metadata is None:
             raise InvalidPointCloudError()
+        try:
+            self._storage.write_record(
+                dataset_id, _to_record(safe_filename, inspector.metadata)
+            )
+        except BaseException:
+            self._storage.discard_upload(dataset_id)
+            raise
         return StoredDataset(
             id=dataset_id,
             filename=safe_filename,
