@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { CropOverlay, type CropBounds } from '@/features/crop'
 import { MeasureOverlay, type Vec3 } from '@/features/measure'
 
 import { mountPotreeViewer, type ColorMode, type PotreeViewerHandle } from './potreeViewer'
@@ -11,10 +12,21 @@ const props = withDefaults(
     pointSize: number
     colorMode: ColorMode
     measuring?: boolean
+    /** Pick points for another tool (Crop); the page decides who gets each pick. */
+    picking?: boolean
+    cropBounds?: CropBounds | null
+    cropCorners?: Vec3[]
     measurePoints?: Vec3[]
     measureLabel?: string | null
   }>(),
-  { measuring: false, measurePoints: () => [], measureLabel: null },
+  {
+    measuring: false,
+    picking: false,
+    cropBounds: null,
+    cropCorners: () => [],
+    measurePoints: () => [],
+    measureLabel: null,
+  },
 )
 const emit = defineEmits<{ pick: [point: Vec3] }>()
 
@@ -35,14 +47,17 @@ function project(point: Vec3) {
 function syncMeasuring(): void {
   stopMeasuring?.()
   stopMeasuring = null
-  if (handle && props.measuring)
+  if (handle && (props.measuring || props.picking))
     stopMeasuring = handle.enableMeasure((point) => emit('pick', point))
 }
 
 function syncUpdates(): void {
   stopUpdates?.()
   stopUpdates = null
-  if (handle && props.measurePoints.length > 0) {
+  if (
+    handle &&
+    (props.measurePoints.length > 0 || props.cropBounds || props.cropCorners.length > 0)
+  ) {
     stopUpdates = handle.onUpdate(() => (viewVersion.value += 1))
   }
 }
@@ -57,8 +72,11 @@ watch(
   () => props.colorMode,
   (mode) => handle?.setColorMode(mode),
 )
-watch(() => props.measuring, syncMeasuring)
-watch(() => props.measurePoints.length > 0, syncUpdates)
+watch(() => props.measuring || props.picking, syncMeasuring)
+watch(
+  () => props.measurePoints.length > 0 || !!props.cropBounds || props.cropCorners.length > 0,
+  syncUpdates,
+)
 
 onMounted(async () => {
   try {
@@ -87,6 +105,12 @@ onBeforeUnmount(() => {
     <p v-if="error" role="alert">{{ error }}</p>
     <div class="viewer-frame">
       <div ref="element" class="viewer-canvas" />
+      <CropOverlay
+        :bounds="cropBounds"
+        :corners="cropCorners"
+        :project="project"
+        :version="viewVersion"
+      />
       <MeasureOverlay
         :points="measurePoints"
         :project="project"
