@@ -150,6 +150,16 @@ Trang `/viewer/:id` có nút **Measure**. Khi bật, con trỏ trên viewer thà
 
 Cách hoạt động: `potreeViewer.ts` là chỗ duy nhất gọi Potree. `enableMeasure` dùng `Potree.Utils.getMousePointCloudIntersection`; vị trí trả về đã nhân `matrixWorld` của point cloud nên là tọa độ world theo công thức ở phần spike #25. Phép tính khoảng cách nằm trong `features/measure/measurement.ts`; marker được chiếu về pixel bằng `projectToScreen` (tính bằng double, không qua buffer 32-bit) và đặt lại sau mỗi frame. Chỉ chọn điểm trên điểm point cloud, không nội suy giữa các điểm, nên độ chính xác phụ thuộc mật độ điểm và point budget.
 
+## Chọn vùng Crop (S3-Q1)
+
+Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai góc đối diện của vùng trong viewer (dùng cùng cơ chế chọn điểm với Measure, nên Measure và Crop không bật cùng lúc), hoặc gõ sáu giá trị Min/Max X/Y/Z. Kết quả là `{minX, minY, minZ, maxX, maxY, maxZ}` theo **tọa độ world**, đúng schema `Bounds` trong `openapi.yaml`, hiển thị trong panel và vẽ thành hộp 3D trên viewer. Nút **Clear** xoá vùng.
+
+- Hai điểm chọn nằm trên bề mặt point cloud nên chiều cao (Z) lấy từ `metadata.bounds` của dataset; có thể sửa tay.
+- `features/crop/cropBounds.ts` là các hàm thuần: `normalizeBounds` (đảo min/max khi kéo ngược), `isEmpty` (vùng không có diện tích X hoặc Y; chiều cao 0 vẫn hợp lệ vì dataset phẳng), `clampToDatasetBounds` (cắt vào `metadata.bounds`; chỉ chạm cạnh không tính là giao), `resolveCropBounds` (gộp các bước trên, trả `INVALID`, `EMPTY` hoặc `OUTSIDE_DATASET`). Crop API và UI nên dùng chung các hàm này.
+- Giá trị `bounds` đầu ra là `useCropSelection().bounds` (null khi chưa có vùng hợp lệ); #31 đọc giá trị này.
+- Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. **CẦN XÁC MINH** trên trình duyệt thật với dataset có offset lớn.
+- Chưa kéo thả hộp trực tiếp trong viewer; chọn bằng hai click hoặc nhập số.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
