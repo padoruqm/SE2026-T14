@@ -154,6 +154,8 @@ Trang `/viewer/:id` có nút **Measure**. Khi bật, con trỏ trên viewer thà
 
 Cách hoạt động: `potreeViewer.ts` là chỗ duy nhất gọi Potree. `enableMeasure` dùng `Potree.Utils.getMousePointCloudIntersection`; vị trí trả về đã nhân `matrixWorld` của point cloud nên là tọa độ world theo công thức ở phần spike #25. Phép tính khoảng cách nằm trong `features/measure/measurement.ts`; marker được chiếu về pixel bằng `projectToScreen` (tính bằng double, không qua buffer 32-bit) và đặt lại sau mỗi frame. Chỉ chọn điểm trên điểm point cloud, không nội suy giữa các điểm, nên độ chính xác phụ thuộc mật độ điểm và point budget.
 
+Checklist thủ công cho viewer và Measure (kèm mẫu bản ghi bằng chứng) nằm ở [frontend/MANUAL_CHECKLIST.md](frontend/MANUAL_CHECKLIST.md).
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
