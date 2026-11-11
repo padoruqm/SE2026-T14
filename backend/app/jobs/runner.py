@@ -74,10 +74,17 @@ class ConvertJobRunner:
                     )
                     return
                 # The processor is synchronous and needs a directory that does not exist yet.
+                loop = asyncio.get_running_loop()
+
+                def report_progress(progress: int) -> None:
+                    loop.call_soon_threadsafe(self._report_progress, job, progress)
+
                 context = ProcessingContext(
-                    input_path=source, output_directory=staging / "result"
+                    input_path=source,
+                    output_directory=staging / "result",
+                    progress_callback=report_progress,
                 )
-                result = await asyncio.get_running_loop().run_in_executor(
+                result = await loop.run_in_executor(
                     None, self._processor.execute, context, {}
                 )
                 self._storage.publish_converted(
@@ -144,3 +151,8 @@ class ConvertJobRunner:
             "job_id": job.id,
             "point_cloud_id": job.point_cloud_id,
         }
+
+    @staticmethod
+    def _report_progress(job: Job, progress: int) -> None:
+        if job.state is JobState.RUNNING:
+            job.report_progress(progress)

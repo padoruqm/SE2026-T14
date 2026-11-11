@@ -55,6 +55,14 @@ class JobStateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             job.transition_to(JobState.QUEUED)
 
+    def test_succeeded_job_cannot_go_back_to_running(self) -> None:
+        job = self._job()
+        job.transition_to(JobState.RUNNING)
+        job.transition_to(JobState.SUCCEEDED, progress=100, result_id="pc_test")
+
+        with self.assertRaises(ValueError):
+            job.transition_to(JobState.RUNNING)
+
     def test_terminal_job_cannot_transition_again(self) -> None:
         job = self._job()
         job.transition_to(
@@ -73,6 +81,21 @@ class JobStateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             job.transition_to(JobState.RUNNING, progress=101)
 
+    def test_running_job_reports_monotonic_progress_below_completion(self) -> None:
+        job = self._job()
+
+        with self.assertRaises(ValueError):
+            job.report_progress(10)
+
+        job.transition_to(JobState.RUNNING)
+        job.report_progress(42)
+        job.report_progress(20)
+        job.report_progress(99)
+
+        self.assertEqual(99, job.progress)
+        with self.assertRaises(ValueError):
+            job.report_progress(100)
+
     def test_job_store_detects_queued_and_running_jobs_as_active(self) -> None:
         store = JobStore()
         job = store.create("convert", "pc_test")
@@ -86,6 +109,22 @@ class JobStateTest(unittest.TestCase):
             result_id="pc_test",
         )
         self.assertFalse(store.has_active("convert", "pc_test"))
+
+    def test_latest_returns_the_newest_job_of_that_type_for_the_point_cloud(self) -> None:
+        store = JobStore()
+        store.create("convert", "pc_a")
+        newest = store.create("convert", "pc_a")
+        store.create("convert", "pc_b")
+        store.create("crop", "pc_a")
+
+        self.assertIs(newest, store.latest("convert", "pc_a"))
+
+    def test_latest_is_none_when_there_is_no_matching_job(self) -> None:
+        store = JobStore()
+        store.create("convert", "pc_a")
+
+        self.assertIsNone(store.latest("convert", "pc_other"))
+        self.assertIsNone(store.latest("crop", "pc_a"))
 
     def test_runner_rejects_nonpositive_worker_count(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
