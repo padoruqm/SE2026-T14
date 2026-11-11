@@ -10,7 +10,7 @@ python scripts/generate-sample-las.py        # data/sample/demo.las (5 điểm, 
 docker compose up --build                    # hoặc make dev + npm run dev
 ```
 
-Upload LAS, bấm convert, chờ job `succeeded`, mở `/viewer/<id>`. Để đo khoảng cách có ý nghĩa nên dùng lưới nhiều điểm (xem PR #81: lưới 40.000 điểm, UTM); `demo.las` chỉ có 5 điểm.
+Upload LAS, bấm convert, chờ job `succeeded`, mở `/viewer/<id>`. Để đo khoảng cách có ý nghĩa nên dùng lưới nhiều điểm (xem PR #81, đã merge: lưới 40.000 điểm, UTM); `demo.las` chỉ có 5 điểm.
 
 Ký hiệu: ✅ đã kiểm chứng (nêu cách), ⬜ chưa chạy, cần người chạy trên trình duyệt có WebGL.
 
@@ -32,7 +32,7 @@ Ký hiệu: ✅ đã kiểm chứng (nêu cách), ⬜ chưa chạy, cần ngư�
 
 | # | Mục | Cách kiểm | Kết quả |
 |---|---|---|---|
-| B1 | Chọn 2 điểm → khoảng cách theo đơn vị dataset, không giả định mét | Trình duyệt: đo, so với giá trị tính tay. Unit: `units.spec.ts` (`m` cho UTM/3857/4978, `units` cho CRS lạ, từ chối khoảng cách cho CRS địa lý) | Unit ✅ (PR #81 head: 169 test pass). Trình duyệt ⬜ |
+| B1 | Chọn 2 điểm → khoảng cách theo đơn vị dataset, không giả định mét | Trình duyệt: đo, so với giá trị tính tay. Unit: `units.spec.ts` (`m` cho UTM/3857/4978, `units` cho CRS lạ, từ chối khoảng cách cho CRS địa lý) | Unit ✅ (#81 head `c5c9d42`: 208 test pass). Trình duyệt ⬜ |
 | B2 | Chọn 1 điểm → X/Y/Z world, so với giá trị biết trước | Trình duyệt, so với `pdal info` hoặc fixture sinh bởi `generate-sample-las.py` (**CẦN XÁC MINH** công cụ kiểm tra) | ⬜ |
 | B3 | Xoá phép đo có xác nhận; dữ liệu nguồn không đổi (reload vẫn như cũ) | Unit: `useMeasure.spec.ts`, `MeasurePanel.spec.ts`. Trình duyệt: Delete/Keep, reload, xem Network chỉ có GET | Unit ✅. Trình duyệt ⬜ |
 | B4 | Tắt tool/đổi dataset không để lại annotation hoặc listener | Unit: `potreeMeasure.spec.ts` (gỡ listener khi disable và dispose). Trình duyệt: bật/tắt 3 lần, đổi dataset 3 lần | Unit ✅. Trình duyệt ⬜ |
@@ -40,7 +40,7 @@ Ký hiệu: ✅ đã kiểm chứng (nêu cách), ⬜ chưa chạy, cần ngư�
 
 ## C. Điều đã kiểm chứng trong review PR #81
 
-- Lint, typecheck, `npm test` (169 test) pass trên PR #81 gộp với `dev`, ngày 2026-11-06.
+- Lint, typecheck, build, prettier và `npm test` (208 test) pass trên head của PR #81 (`c5c9d42`, đã gộp `dev` gồm #74), ngày 2026-11-11. PR #81 đã merge vào `dev`.
 - Review code: chọn điểm chỉ khi click (kéo chuột bị bỏ qua), chiếu điểm bằng double, trạng thái tối đa hai điểm, từ chối khoảng cách cho CRS địa lý.
 - Kết quả kiểm tra trên trình duyệt thật (Potree 1.8.2, lưới UTM 40.000 điểm) là do tác giả báo trong mô tả PR #81, chưa được lặp lại độc lập ở đây.
 

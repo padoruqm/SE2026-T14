@@ -34,6 +34,9 @@ function handle(): PotreeViewerHandle {
     resetView: vi.fn<() => void>(),
     setPointSize: vi.fn<(size: number) => void>(),
     setColorMode: vi.fn<(mode: 'rgb' | 'elevation' | 'intensity') => void>(),
+    enableMeasure: vi.fn<PotreeViewerHandle['enableMeasure']>(() => () => {}),
+    project: vi.fn<PotreeViewerHandle['project']>(() => ({ x: 0, y: 0, visible: false })),
+    onUpdate: vi.fn<PotreeViewerHandle['onUpdate']>(() => () => {}),
   } as PotreeViewerHandle
 }
 

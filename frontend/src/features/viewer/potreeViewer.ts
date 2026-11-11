@@ -2,7 +2,12 @@
 // through `document.currentScript`, so it is served from public/potree (see
 // scripts/fetch-potree.sh) and loaded with script tags instead of being bundled.
 
+import type { Vec3 } from '@/features/measure'
+
+import { projectToScreen, type CameraLike, type ScreenPoint } from './projection'
+
 interface PotreeRenderer {
+  domElement: HTMLElement
   setAnimationLoop(callback: null): void
   dispose(): void
   forceContextLoss(): void
@@ -19,14 +24,31 @@ interface PotreePointCloud {
 
 interface PotreeViewer {
   renderer: PotreeRenderer
-  scene: { addPointCloud(pointCloud: unknown): void }
+  scene: {
+    addPointCloud(pointCloud: unknown): void
+    pointclouds: unknown[]
+    getActiveCamera(): CameraLike
+  }
+  addEventListener(type: 'update', listener: () => void): void
+  removeEventListener(type: 'update', listener: () => void): void
   setPointBudget(budget: number): void
   setEDLEnabled(enabled: boolean): void
   fitToScreen(): void
 }
 
+interface PotreeUtils {
+  /** `mouse` is in pixels from the top left of the canvas; `location` is in world coordinates. */
+  getMousePointCloudIntersection(
+    mouse: { x: number; y: number },
+    camera: CameraLike,
+    viewer: PotreeViewer,
+    pointClouds: unknown[],
+  ): { location: Vec3 } | null
+}
+
 export interface PotreeGlobal {
   Viewer: new (element: HTMLElement) => PotreeViewer
+  Utils: PotreeUtils
   loadPointCloud(url: string, name?: string): Promise<{ pointcloud: unknown }>
 }
 
@@ -49,8 +71,20 @@ export interface PotreeViewerHandle {
   setPointSize(size: number): void
   setColorMode(mode: ColorMode): void
   resetView(): void
+  /**
+   * Call `onPick` with the world coordinates of the point under the cursor after a
+   * click. Drags (camera moves) are ignored. Returns a function that stops picking.
+   */
+  enableMeasure(onPick: (point: Vec3) => void): () => void
+  /** Canvas pixel position of a world point, for drawing markers over the viewer. */
+  project(point: Vec3): ScreenPoint
+  /** Call `listener` after every frame the viewer updates. Returns an unsubscribe function. */
+  onUpdate(listener: () => void): () => void
   dispose(): void
 }
+
+/** A pointer that moves farther than this between press and release is a drag, not a click. */
+const MAX_CLICK_MOVEMENT_PX = 4
 
 const SCRIPTS = [
   'libs/jquery-3.1.1.min.js',
@@ -95,6 +129,7 @@ export async function mountPotreeViewer(
   viewer.setPointBudget(1_000_000)
 
   let disposed = false
+  const cleanups = new Set<() => void>()
   let loaded: PotreePointCloud | null = null
   // Remembered so a change made while the cloud is still loading is applied once it arrives.
   let pointSize: number | null = null
@@ -127,9 +162,66 @@ export async function mountPotreeViewer(
     resetView() {
       viewer.fitToScreen()
     },
+    enableMeasure(onPick) {
+      const canvas = viewer.renderer.domElement
+      const previousCursor = canvas.style.cursor
+      let pressedAt: { x: number; y: number } | null = null
+
+      const onDown = (event: PointerEvent) => {
+        pressedAt = event.button === 0 ? { x: event.clientX, y: event.clientY } : null
+      }
+      const onUp = (event: PointerEvent) => {
+        const start = pressedAt
+        pressedAt = null
+        if (!start || event.button !== 0) return
+        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > MAX_CLICK_MOVEMENT_PX) {
+          return
+        }
+        const bounds = canvas.getBoundingClientRect()
+        const hit = Potree.Utils.getMousePointCloudIntersection(
+          { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+          viewer.scene.getActiveCamera(),
+          viewer,
+          viewer.scene.pointclouds,
+        )
+        if (hit) onPick({ x: hit.location.x, y: hit.location.y, z: hit.location.z })
+      }
+
+      canvas.addEventListener('pointerdown', onDown)
+      canvas.addEventListener('pointerup', onUp)
+      canvas.style.cursor = 'crosshair'
+
+      const disable = () => {
+        if (!cleanups.delete(disable)) return
+        canvas.removeEventListener('pointerdown', onDown)
+        canvas.removeEventListener('pointerup', onUp)
+        canvas.style.cursor = previousCursor
+      }
+      cleanups.add(disable)
+      return disable
+    },
+    project(point) {
+      const canvas = viewer.renderer.domElement
+      return projectToScreen(
+        point,
+        viewer.scene.getActiveCamera(),
+        canvas.clientWidth,
+        canvas.clientHeight,
+      )
+    },
+    onUpdate(listener) {
+      viewer.addEventListener('update', listener)
+      const unsubscribe = () => {
+        if (!cleanups.delete(unsubscribe)) return
+        viewer.removeEventListener('update', listener)
+      }
+      cleanups.add(unsubscribe)
+      return unsubscribe
+    },
     dispose() {
       if (disposed) return
       disposed = true
+      for (const cleanup of cleanups) cleanup()
       // Potree has no dispose of its own: stop its render loop, release the WebGL
       // context and remove the canvas and overlays it added to the element.
       viewer.renderer.setAnimationLoop(null)
