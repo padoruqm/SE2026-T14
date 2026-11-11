@@ -2,6 +2,7 @@
 import { computed, ref, useTemplateRef } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { MeasurePanel, distanceUnit, formatLength, useMeasure } from '@/features/measure'
 import EmptyState from '@/shared/EmptyState.vue'
 import ErrorState from '@/shared/ErrorState.vue'
 import LoadingState from '@/shared/LoadingState.vue'
@@ -22,6 +23,13 @@ const { state, pointCloud, error, errorKind, reload } = usePointCloudMetadata(()
 const pointSize = ref(1)
 const colorMode = ref<ColorMode>('rgb')
 const canvas = useTemplateRef('canvas')
+const { active, points, coordinates, measurement, confirmingClear, ...measure } = useMeasure()
+const crs = computed(() => pointCloud.value?.metadata.crs ?? null)
+const measureLabel = computed(() =>
+  measurement.value && !distanceUnit(crs.value).geographic
+    ? formatLength(measurement.value.distance, crs.value)
+    : null,
+)
 const url = computed(() => `${apiBaseUrl}/api/pointcloud/${props.id}/viewer/metadata.json`)
 const notFound = computed(() => state.value === 'error' && errorKind.value === 'notFound')
 const conversionFailed = computed(() => pointCloud.value?.status === 'failed')
@@ -79,6 +87,21 @@ const conversionFailed = computed(() => pointCloud.value?.status === 'failed')
         :url="url"
         :point-size="pointSize"
         :color-mode="colorMode"
+        :measuring="active"
+        :measure-points="points"
+        :measure-label="measureLabel"
+        @pick="measure.addPoint"
+      />
+      <MeasurePanel
+        :active="active"
+        :coordinates="coordinates"
+        :measurement="measurement"
+        :confirming-clear="confirmingClear"
+        :crs="crs"
+        @toggle="active ? measure.stop() : measure.start()"
+        @request-clear="measure.requestClear"
+        @confirm-clear="measure.confirmClear"
+        @cancel-clear="measure.cancelClear"
       />
       <MetadataPanel :id="id" />
     </template>
