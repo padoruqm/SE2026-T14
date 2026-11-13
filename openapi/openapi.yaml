@@ -19,6 +19,8 @@ tags:
     description: Point cloud resources, metadata and conversion
   - name: jobs
     description: Long-running processing jobs
+  - name: config
+    description: Business configuration that can change without a code edit
 
 paths:
   /api/upload:
@@ -203,6 +205,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/config:
+    get:
+      tags: [config]
+      operationId: getConfig
+      summary: Get the business configuration currently in use
+      responses:
+        "200":
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppConfig"
+
+  /api/admin/config:
+    put:
+      tags: [config]
+      operationId: updateConfig
+      summary: Change the upload limit at runtime (admin only)
+      description: |
+        Requires the `X-Admin-Token` header to equal `APP_ADMIN_TOKEN`.
+        When `APP_ADMIN_TOKEN` is not set, every request is refused.
+        The value is kept in memory and resets on restart.
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppConfig"
+      responses:
+        "200":
+          description: Configuration after the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppConfig"
+        "401":
+          description: Admin token is missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin token is not valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
 components:
   parameters:
     PointCloudId:
@@ -319,6 +377,15 @@ components:
         message:
           type: string
 
+    AppConfig:
+      type: object
+      required: [maxUploadBytes]
+      properties:
+        maxUploadBytes:
+          type: integer
+          minimum: 1
+          maximum: 1073741824
+
     ErrorCode:
       type: string
       enum:
@@ -330,6 +397,8 @@ components:
         - NOT_FOUND
         - METHOD_NOT_ALLOWED
         - CONFLICT
+        - UNAUTHORIZED
+        - FORBIDDEN
         - INTERNAL_ERROR
 
     ErrorResponse:

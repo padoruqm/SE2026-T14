@@ -57,6 +57,18 @@ class InvalidPointCloudError(AppError):
     message = "The uploaded file is not a supported point cloud"
 
 
+class UnauthorizedError(AppError):
+    status_code = 401
+    code = "UNAUTHORIZED"
+    message = "An admin token is required"
+
+
+class ForbiddenError(AppError):
+    status_code = 403
+    code = "FORBIDDEN"
+    message = "The admin token is not valid"
+
+
 class NotFoundError(AppError):
     status_code = 404
     code = "NOT_FOUND"
