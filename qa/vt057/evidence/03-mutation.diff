@@ -1,0 +1,16 @@
+diff --git a/backend/app/api/config.py b/backend/app/api/config.py
+index 0ac6625..8a0137b 100644
+--- a/backend/app/api/config.py
++++ b/backend/app/api/config.py
+@@ -36,10 +36,7 @@ def require_admin(
+ ) -> None:
+     if not x_admin_token:
+         raise UnauthorizedError()
+-    expected = request.app.state.admin_token
+-    # No configured token means the admin endpoint stays closed.
+-    if expected is None or not hmac.compare_digest(x_admin_token, expected):
+-        raise ForbiddenError()
++    # MUTATION VT-057: authorization check removed on the "token present" path.
+ 
+ 
+ @router.get("/config", response_model=AppConfigResponse)
