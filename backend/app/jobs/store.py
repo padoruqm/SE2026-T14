@@ -41,6 +41,14 @@ class Job:
     result_id: str | None = None
     error: JobError | None = None
 
+    def report_progress(self, progress: int) -> None:
+        if self.state is not JobState.RUNNING:
+            raise ValueError("Only a running job can report progress")
+        if not 0 <= progress <= 99:
+            raise ValueError("Active job progress must be between 0 and 99")
+        if self.progress is None or progress > self.progress:
+            self.progress = progress
+
     def transition_to(
         self,
         state: JobState,
@@ -87,6 +95,13 @@ class JobStore:
 
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
+
+    def latest(self, job_type: str, point_cloud_id: str) -> Job | None:
+        """Return the most recently created job of this type for the point cloud."""
+        for job in reversed(self._jobs.values()):
+            if job.type == job_type and job.point_cloud_id == point_cloud_id:
+                return job
+        return None
 
     def has_active(self, job_type: str, point_cloud_id: str) -> bool:
         return any(

@@ -66,6 +66,16 @@ class BlockingProcessor(RecordingProcessor):
         return super().execute(context, parameters)
 
 
+class BlockingProgressProcessor(BlockingProcessor):
+    def execute(
+        self, context: ProcessingContext, parameters: Mapping[str, object]
+    ) -> ProcessingResult:
+        if context.progress_callback is None:
+            raise AssertionError("runner did not provide a progress callback")
+        context.progress_callback(37)
+        return super().execute(context, parameters)
+
+
 class ConvertFlowTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -123,7 +133,7 @@ class ConvertFlowTest(unittest.TestCase):
         self.assertEqual([], [p for p in (self.root / "converted").iterdir() if p.name.startswith(".")])
 
     def test_synchronous_processor_does_not_block_job_api_requests(self) -> None:
-        processor = BlockingProcessor()
+        processor = BlockingProgressProcessor()
         client = self._client(processor)
         point_cloud_id = self._upload(client)
 
@@ -142,6 +152,7 @@ class ConvertFlowTest(unittest.TestCase):
                 ).result(timeout=2)
                 self.assertEqual(200, status_response.status_code)
                 self.assertEqual("running", status_response.json()["state"])
+                self.assertEqual(37, status_response.json()["progress"])
             finally:
                 processor.release.set()
 

@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { CropOverlay, type CropBounds } from '@/features/crop'
 import { MeasureOverlay, type Vec3 } from '@/features/measure'
+import ErrorState from '@/shared/ErrorState.vue'
 
 import { mountPotreeViewer, type ColorMode, type PotreeViewerHandle } from './potreeViewer'
 
@@ -37,6 +38,7 @@ let handle: PotreeViewerHandle | null = null
 let unmounted = false
 let stopMeasuring: (() => void) | null = null
 let stopUpdates: (() => void) | null = null
+let attempt = 0
 
 function project(point: Vec3) {
   return handle?.project(point) ?? { x: NaN, y: NaN, visible: false }
@@ -78,19 +80,25 @@ watch(
   syncUpdates,
 )
 
-onMounted(async () => {
+async function load(): Promise<void> {
+  const current = ++attempt
+  error.value = null
+  handle?.dispose()
+  handle = null
   try {
     const mounted = await mountPotreeViewer(element.value!, props.url)
-    if (unmounted) return mounted.dispose()
+    if (unmounted || current !== attempt) return mounted.dispose()
     handle = mounted
     handle.setPointSize(props.pointSize)
     handle.setColorMode(props.colorMode)
     syncMeasuring()
     syncUpdates()
   } catch {
-    error.value = 'The 3D viewer could not be loaded.'
+    if (current === attempt) error.value = 'The 3D viewer could not be loaded.'
   }
-})
+}
+
+onMounted(load)
 
 onBeforeUnmount(() => {
   unmounted = true
@@ -102,7 +110,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <p v-if="error" role="alert">{{ error }}</p>
+    <ErrorState v-if="error" :message="error" retryable @retry="load" />
     <div class="viewer-frame">
       <div ref="element" class="viewer-canvas" />
       <CropOverlay

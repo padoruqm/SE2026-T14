@@ -236,7 +236,11 @@ components:
           properties:
             viewerUrl:
               type: [string, "null"]
-              description: Set only when the viewer resources are ready
+              description: |
+                Set only when the viewer resources are ready. Every file of the
+                conversion result is served under `/api/pointcloud/{id}/viewer/`
+                (with Range support); that route is not described here because it
+                returns opaque files, not JSON.
             sourceId:
               type: [string, "null"]
               description: ID of the point cloud this one was derived from

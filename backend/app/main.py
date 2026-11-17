@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.api.datasets import router as datasets_router
 from app.api.jobs import router as jobs_router
+from app.api.viewer import router as viewer_router
 from app.core.config import Settings
 from app.core.errors import register_error_handlers
 from app.jobs.runner import ConvertJobRunner
@@ -35,6 +36,7 @@ def create_app(
     register_error_handlers(app)
     app.include_router(datasets_router)
     app.include_router(jobs_router)
+    app.include_router(viewer_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Protocol, runtime_checkable
+from typing import Callable, Mapping, Protocol, runtime_checkable
+
+ProgressCallback = Callable[[int], None]
 
 
 @dataclass(frozen=True, slots=True)
 class ProcessingContext:
     input_path: Path
     output_directory: Path
+    progress_callback: ProgressCallback | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -16,7 +16,11 @@ export type PointCloud = {
 
 export type PointCloudDetail = PointCloud & {
     /**
-     * Set only when the viewer resources are ready
+     * Set only when the viewer resources are ready. Every file of the
+     * conversion result is served under `/api/pointcloud/{id}/viewer/`
+     * (with Range support); that route is not described here because it
+     * returns opaque files, not JSON.
+     *
      */
     viewerUrl?: string | null;
     /**

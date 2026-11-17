@@ -162,5 +162,85 @@ class LocalDatasetStorageTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(b"keep me", target.read_bytes())
 
 
+class DatasetRecordTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name)
+        self.storage = LocalDatasetStorage(self.root, MAX_UPLOAD_BYTES)
+
+    def tearDown(self) -> None:
+        self.temporary_directory.cleanup()
+
+    def test_reads_back_what_was_written(self) -> None:
+        record = {"filename": "survey.laz", "point_count": 12, "crs": None}
+
+        self.storage.write_record("pc_1", record)
+
+        self.assertEqual(record, self.storage.read_record("pc_1"))
+
+    def test_unknown_record_is_none(self) -> None:
+        self.assertIsNone(self.storage.read_record("pc_missing"))
+
+    def test_writing_again_replaces_the_record(self) -> None:
+        self.storage.write_record("pc_1", {"filename": "a.las"})
+        self.storage.write_record("pc_1", {"filename": "b.las"})
+
+        self.assertEqual({"filename": "b.las"}, self.storage.read_record("pc_1"))
+
+    def test_leaves_no_temporary_file_behind(self) -> None:
+        self.storage.write_record("pc_1", {"filename": "a.las"})
+
+        names = [path.name for path in (self.root / "metadata").iterdir()]
+        self.assertEqual(["pc_1.json"], names)
+
+    def test_records_do_not_appear_next_to_uploads(self) -> None:
+        self.storage.write_record("pc_1", {"filename": "a.las"})
+
+        self.assertFalse((self.root / "uploads").exists())
+
+    def test_a_lookup_with_an_unsafe_id_finds_nothing(self) -> None:
+        (self.root / "secret.json").write_text('{"filename": "x"}', encoding="utf-8")
+
+        for dataset_id in ("../secret", "..", "", "a/b", "pc_1\x00", "bad.id"):
+            with self.subTest(dataset_id=dataset_id):
+                self.assertIsNone(self.storage.read_record(dataset_id))
+
+    def test_writing_a_record_with_an_unsafe_id_is_refused(self) -> None:
+        for dataset_id in ("../escape", "..", "", "a/b", "bad.id"):
+            with self.subTest(dataset_id=dataset_id):
+                with self.assertRaises(InvalidStorageKeyError):
+                    self.storage.write_record(dataset_id, {"filename": "a.las"})
+
+        self.assertEqual([], sorted(self.root.rglob("*.json")))
+
+    def test_a_symlinked_record_is_not_followed(self) -> None:
+        target = self.root / "outside.json"
+        target.write_text('{"filename": "outside"}', encoding="utf-8")
+        (self.root / "metadata").mkdir()
+        (self.root / "metadata" / "pc_1.json").symlink_to(target)
+
+        self.assertIsNone(self.storage.read_record("pc_1"))
+
+    def test_a_corrupt_record_is_an_error_not_a_missing_dataset(self) -> None:
+        (self.root / "metadata").mkdir()
+        (self.root / "metadata" / "pc_1.json").write_text("{not json", encoding="utf-8")
+
+        with self.assertRaises(ValueError):
+            self.storage.read_record("pc_1")
+
+    async def test_discard_upload_removes_the_stored_file_only(self) -> None:
+        await self.storage.save("pc_1", ".las", _chunks(b"LASF"))
+        await self.storage.save("pc_2", ".las", _chunks(b"LASF"))
+
+        self.storage.discard_upload("pc_1")
+
+        self.assertIsNone(self.storage.find("pc_1"))
+        self.assertIsNotNone(self.storage.find("pc_2"))
+
+    def test_discard_upload_of_an_unknown_dataset_is_a_no_op(self) -> None:
+        self.storage.discard_upload("pc_missing")
+        self.storage.discard_upload("../etc")
+
+
 if __name__ == "__main__":
     unittest.main()

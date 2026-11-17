@@ -4,8 +4,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import type { Vec3 } from '@/features/measure'
 
 import ViewerPage from '../ViewerPage.vue'
+import { checkWebGL } from '../checkWebGL'
 import { mountPotreeViewer, type PotreeViewerHandle } from '../potreeViewer'
 
+vi.mock('../checkWebGL', () => ({ checkWebGL: vi.fn<() => boolean>() }))
 vi.mock('../potreeViewer', () => ({
   mountPotreeViewer: vi.fn<() => Promise<unknown>>(),
 }))
@@ -92,6 +94,7 @@ function results(page: Awaited<ReturnType<typeof mountPage>>) {
 beforeEach(() => {
   fetchMock.mockReset()
   vi.mocked(mountPotreeViewer).mockReset()
+  vi.mocked(checkWebGL).mockReturnValue(true)
   vi.stubGlobal('fetch', fetchMock)
 })
 
@@ -282,5 +285,28 @@ describe('measuring in the viewer', () => {
     expect(page.wrapper.text()).toContain('angular coordinates')
     expect(page.wrapper.text()).not.toContain('Distance')
     expect(page.wrapper.find('.measure-label').exists()).toBe(false)
+  })
+
+  it('does not offer Measure when the point cloud cannot be shown', async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: { code: 'NOT_FOUND', message: 'Not Found', requestId: 'req_1', details: {} },
+          }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } },
+        ),
+    )
+    vi.mocked(mountPotreeViewer).mockResolvedValue(fakeHandle().handle)
+
+    const wrapper = mount(ViewerPage, {
+      props: { id: 'pc_missing' },
+      global: { stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Point cloud not found')
+    expect(wrapper.find('.measure-panel').exists()).toBe(false)
+    expect(mountPotreeViewer).not.toHaveBeenCalled()
   })
 })

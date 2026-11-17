@@ -4,8 +4,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import type { Vec3 } from '@/features/measure'
 
 import ViewerPage from '../ViewerPage.vue'
+import { checkWebGL } from '../checkWebGL'
 import { mountPotreeViewer, type PotreeViewerHandle } from '../potreeViewer'
 
+vi.mock('../checkWebGL', () => ({ checkWebGL: vi.fn<() => boolean>() }))
 vi.mock('../potreeViewer', () => ({
   mountPotreeViewer: vi.fn<() => Promise<unknown>>(),
 }))
@@ -91,6 +93,7 @@ function inputs(page: Page) {
 beforeEach(() => {
   fetchMock.mockReset()
   vi.mocked(mountPotreeViewer).mockReset()
+  vi.mocked(checkWebGL).mockReturnValue(true)
   vi.stubGlobal('fetch', fetchMock)
 })
 
