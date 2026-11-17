@@ -98,7 +98,7 @@ npm run build
 
 ```bash
 cd frontend
-./../scripts/fetch-potree.sh                    # một lần: Potree vào public/potree
+../scripts/fetch-potree.sh                       # một lần: Potree vào public/potree
 npx playwright install chromium                 # một lần: tải trình duyệt
 npm run test:e2e                                # tự chạy Vite dev server
 ```
