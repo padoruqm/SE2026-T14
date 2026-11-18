@@ -12,6 +12,7 @@
     "mock": "prism mock ../openapi/openapi.yaml --port 4010 --cors",
     "typecheck": "vue-tsc --build",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint .",
     "lint:eslint": "eslint . --cache",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
+    "@playwright/test": "1.49.1",
     "@redocly/cli": "^2.66.0",
     "@stoplight/prism-cli": "^5.16.0",
     "@tsconfig/node24": "^24.0.5",

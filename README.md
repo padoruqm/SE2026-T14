@@ -92,6 +92,22 @@ npm run build
 
 Đặt `VITE_API_BASE_URL` (xem `.env.example`) để trỏ tới backend; mặc định `http://127.0.0.1:8000`.
 
+## Test E2E (S2-D4, #22)
+
+`frontend/e2e/measure.spec.ts` chạy trên Chromium thật: upload `.las` → chờ convert → mở `/viewer/:id` → bật Measure, chọn hai điểm trên point cloud → kiểm tra X/Y/Z, Distance/Horizontal/Vertical khớp với From/To → xoá phép đo và xác nhận không có request ghi nào.
+
+```bash
+cd frontend
+../scripts/fetch-potree.sh                       # một lần: Potree vào public/potree
+npx playwright install chromium                 # một lần: tải trình duyệt
+npm run test:e2e                                # tự chạy Vite dev server
+```
+
+- **Backend được mock**, không cần Docker hay PotreeConverter: Playwright chặn `/api/*` và trả metadata, job và các file viewer. Test kiểm tra hành vi của trình duyệt, không kiểm tra converter (đã có test backend riêng).
+- **Octree fixture** (`frontend/e2e/fixtures/potree/`, khoảng 32 KB) là lưới 40 × 40 điểm trên mặt phẳng dốc 0,1 m/m, sinh bằng `python scripts/generate-potree-fixture.py`. Khi đổi script, sinh lại và commit ba file.
+- WebGL chạy bằng SwiftShader nên không cần GPU. Vitest bỏ qua thư mục `e2e/`.
+- Chưa có workflow CI cho frontend, nên test này chưa chạy tự động trên PR.
+
 ## Spike #6: Potree trong Vue/Vite
 
 **Kết luận: tiếp tục với Potree 1.8.2.** Adapter mount/dispose chạy được trong Vite dev và production build. Viewer render được cả output PotreeConverter 2.x (`metadata.json`) lẫn định dạng 1.x (`cloud.js`).

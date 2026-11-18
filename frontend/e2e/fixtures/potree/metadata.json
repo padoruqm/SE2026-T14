@@ -1,0 +1,76 @@
+{
+  "version": "2.0",
+  "name": "e2e-grid",
+  "description": "",
+  "points": 1600,
+  "projection": "",
+  "hierarchy": {
+    "firstChunkSize": 22,
+    "stepSize": 4,
+    "depth": 0
+  },
+  "offset": [
+    500000.0,
+    2000000.0,
+    100.0
+  ],
+  "scale": [
+    0.001,
+    0.001,
+    0.001
+  ],
+  "spacing": 2.5,
+  "boundingBox": {
+    "min": [
+      500000.0,
+      2000000.0,
+      100.0
+    ],
+    "max": [
+      500097.5,
+      2000097.5,
+      109.75
+    ]
+  },
+  "encoding": "DEFAULT",
+  "attributes": [
+    {
+      "name": "position",
+      "description": "",
+      "size": 12,
+      "numElements": 3,
+      "elementSize": 4,
+      "type": "int32",
+      "min": [
+        500000.0,
+        2000000.0,
+        100.0
+      ],
+      "max": [
+        500097.5,
+        2000097.5,
+        109.75
+      ]
+    },
+    {
+      "name": "rgb",
+      "description": "",
+      "size": 8,
+      "numElements": 4,
+      "elementSize": 2,
+      "type": "uint16",
+      "min": [
+        0,
+        0,
+        0,
+        65535
+      ],
+      "max": [
+        65535,
+        65535,
+        65535,
+        65535
+      ]
+    }
+  ]
+}
