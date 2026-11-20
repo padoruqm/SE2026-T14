@@ -64,6 +64,26 @@ class LocalDatasetStorageTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual([], self._files_under_root())
 
+    # VT-057 TC11: a runtime change of the limit is used by the next upload
+    async def test_a_changed_limit_applies_to_the_next_save(self) -> None:
+        self.storage.max_upload_bytes = 8
+
+        with self.assertRaises(UploadTooLargeError):
+            await self.storage.save("pc_1", ".las", _chunks(b"x" * 9))
+
+        self.assertEqual(8, self.storage.max_upload_bytes)
+
+    # VT-057 TC12: one upload is judged against one limit, even if it changes midway
+    async def test_a_limit_change_during_an_upload_does_not_affect_it(self) -> None:
+        async def chunks_that_change_the_limit() -> AsyncIterator[bytes]:
+            yield b"x" * 4
+            self.storage.max_upload_bytes = 1
+            yield b"x" * 4
+
+        _, size = await self.storage.save("pc_1", ".las", chunks_that_change_the_limit())
+
+        self.assertEqual(8, size)
+
     async def test_removes_the_partial_file_when_the_stream_fails(self) -> None:
         with self.assertRaises(ConnectionResetError):
             await self.storage.save("pc_1", ".las", _failing_after(b"LASF"))

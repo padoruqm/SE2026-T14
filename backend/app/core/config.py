@@ -12,6 +12,7 @@ class Settings:
     potree_converter_path: str | None = None
     conversion_timeout_seconds: float = 600.0
     job_workers: int = 1
+    admin_token: str | None = None
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -23,4 +24,5 @@ class Settings:
                 os.getenv("APP_JOB_TIMEOUT_SECONDS") or 600
             ),
             job_workers=int(os.getenv("APP_JOB_WORKERS") or 1),
+            admin_token=os.getenv("APP_ADMIN_TOKEN") or None,
         )

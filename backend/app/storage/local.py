@@ -27,7 +27,7 @@ class LocalDatasetStorage:
         self._upload_root = root / "uploads"
         self._converted_root = root / "converted"
         self._record_root = root / "metadata"
-        self._max_upload_bytes = max_upload_bytes
+        self.max_upload_bytes = max_upload_bytes
 
     async def save(
         self,
@@ -46,12 +46,14 @@ class LocalDatasetStorage:
         if destination.is_symlink() or partial.is_symlink():
             raise InvalidStorageKeyError("Refusing to write through a symbolic link")
         size = 0
+        # Read the limit once so a runtime change never splits one upload.
+        max_upload_bytes = self.max_upload_bytes
 
         try:
             with partial.open("wb") as output:
                 async for chunk in chunks:
                     size += len(chunk)
-                    if size > self._max_upload_bytes:
+                    if size > max_upload_bytes:
                         raise UploadTooLargeError
                     output.write(chunk)
             partial.replace(destination)

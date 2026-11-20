@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from app.api.config import router as config_router
 from app.api.datasets import router as datasets_router
 from app.api.jobs import router as jobs_router
 from app.api.viewer import router as viewer_router
@@ -33,10 +34,12 @@ def create_app(
         store=app.state.job_store,
         workers=resolved_settings.job_workers,
     )
+    app.state.admin_token = resolved_settings.admin_token
     register_error_handlers(app)
     app.include_router(datasets_router)
     app.include_router(jobs_router)
     app.include_router(viewer_router)
+    app.include_router(config_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
