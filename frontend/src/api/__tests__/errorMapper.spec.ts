@@ -17,6 +17,7 @@ describe('mapError', () => {
     ['INVALID_POINT_CLOUD', 'processing', false],
     ['CONFLICT', 'processing', false],
     ['NOT_FOUND', 'notFound', false],
+    ['GONE', 'notFound', false],
     ['METHOD_NOT_ALLOWED', 'unexpected', true],
     ['INTERNAL_ERROR', 'unexpected', true],
   ])('maps %s to %s (retryable: %s)', (code, kind, retryable) => {

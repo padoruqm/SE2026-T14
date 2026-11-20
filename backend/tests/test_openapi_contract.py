@@ -67,7 +67,7 @@ class OpenApiContractTest(unittest.TestCase):
             "get"
         ]["responses"]
 
-        for status in ("200", "404"):
+        for status in ("200", "404", "410"):
             self.assertIn(status, contract)
             self.assertIn(status, implemented)
 

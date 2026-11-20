@@ -63,6 +63,12 @@ class NotFoundError(AppError):
     message = "The requested resource was not found"
 
 
+class GoneError(AppError):
+    status_code = 410
+    code = "GONE"
+    message = "The requested resource existed but is no longer available"
+
+
 class ConflictError(AppError):
     status_code = 409
     code = "CONFLICT"

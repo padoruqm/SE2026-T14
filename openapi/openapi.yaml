@@ -107,6 +107,8 @@ paths:
                 sourceId: null
         "404":
           $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -240,7 +242,8 @@ components:
                 Set only when the viewer resources are ready. Every file of the
                 conversion result is served under `/api/pointcloud/{id}/viewer/`
                 (with Range support); that route is not described here because it
-                returns opaque files, not JSON.
+                returns opaque files, not JSON. It answers 404 for an unknown ID and
+                410 when the point cloud existed but its data is gone.
             sourceId:
               type: [string, "null"]
               description: ID of the point cloud this one was derived from
@@ -328,6 +331,7 @@ components:
         - UNSUPPORTED_FILE_TYPE
         - INVALID_POINT_CLOUD
         - NOT_FOUND
+        - GONE
         - METHOD_NOT_ALLOWED
         - CONFLICT
         - INTERNAL_ERROR
@@ -414,6 +418,23 @@ components:
                     fields:
                       - location: [body, file]
                         reason: Field required
+    Gone:
+      description: |
+        The resource existed but its data is no longer available, for example a
+        result that was removed. A resource that never existed is `NotFound`.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: GONE
+              message: This point cloud is no longer available
+              requestId: req_4c1d9e
+              details: {}
     NotFound:
       description: The resource does not exist
       headers:

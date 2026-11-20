@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import asdict, dataclass
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 from uuid import uuid4
 
 from app.core.errors import (
     FileTooLargeError,
+    GoneError,
     InvalidPointCloudError,
     NotFoundError,
     UnsupportedFileTypeError,
@@ -32,6 +33,7 @@ class StoredDataset:
     filename: str
     status: str
     metadata: LasMetadata
+    source_id: str | None = None
 
 
 def sanitize_filename(filename: str) -> str:
@@ -65,20 +67,30 @@ class _HeaderInspector:
             raise InvalidPointCloudError()
 
 
-def _to_record(filename: str, metadata: LasMetadata) -> dict[str, object]:
-    return {
+def _to_record(
+    filename: str, metadata: LasMetadata, source_id: str | None = None
+) -> dict[str, object]:
+    record: dict[str, object] = {
         "filename": filename,
         "point_count": metadata.point_count,
         "bounds": asdict(metadata.bounds),
         "crs": metadata.crs,
     }
+    if source_id is not None:
+        record["source_id"] = source_id
+    return record
 
 
-def _from_record(record: Mapping[str, Any]) -> tuple[str, LasMetadata]:
-    return str(record["filename"]), LasMetadata(
-        point_count=int(record["point_count"]),
-        bounds=LasBounds(**record["bounds"]),
-        crs=record["crs"],
+def _from_record(record: Mapping[str, Any]) -> tuple[str, LasMetadata, str | None]:
+    source_id = record.get("source_id")
+    return (
+        str(record["filename"]),
+        LasMetadata(
+            point_count=int(record["point_count"]),
+            bounds=LasBounds(**record["bounds"]),
+            crs=record["crs"],
+        ),
+        None if source_id is None else str(source_id),
     )
 
 
@@ -90,15 +102,62 @@ class DatasetService:
         self._job_store = job_store
 
     def get(self, dataset_id: str) -> StoredDataset:
+        """Return the dataset, or raise NotFoundError (never existed) or GoneError.
+
+        GoneError means the record is still there but the data behind it is not.
+        """
         record = self._storage.read_record(dataset_id)
         if record is None:
             raise NotFoundError("Point cloud not found")
-        filename, metadata = _from_record(record)
+        filename, metadata, source_id = _from_record(record)
+        if self._is_lost(dataset_id, source_id):
+            raise GoneError("This point cloud is no longer available")
         return StoredDataset(
             id=dataset_id,
             filename=filename,
             status=self._status(dataset_id),
             metadata=metadata,
+            source_id=source_id,
+        )
+
+    def _is_lost(self, dataset_id: str, source_id: str | None) -> bool:
+        if self._storage.has_converted(dataset_id):
+            return False
+        # A result has no upload to convert again, so it is lost without its files.
+        # An upload only counts as lost when the file itself is gone.
+        return source_id is not None or self._storage.find(dataset_id) is None
+
+    def create_result(
+        self,
+        source_id: str,
+        filename: str,
+        metadata: LasMetadata,
+        converted: Path,
+    ) -> StoredDataset:
+        """Register a dataset derived from `source_id` (for example a crop).
+
+        `converted` is the viewer-ready output; it is moved into storage. The result
+        gets its own ID and is stored like an upload, with `source_id` recording where
+        it came from.
+        """
+        self.get(source_id)
+
+        dataset_id = f"pc_{uuid4().hex}"
+        safe_filename = sanitize_filename(filename)
+        self._storage.publish_converted(dataset_id, converted)
+        try:
+            self._storage.write_record(
+                dataset_id, _to_record(safe_filename, metadata, source_id)
+            )
+        except BaseException:
+            self._storage.discard_converted(dataset_id)
+            raise
+        return StoredDataset(
+            id=dataset_id,
+            filename=safe_filename,
+            status="ready",
+            metadata=metadata,
+            source_id=source_id,
         )
 
     def _status(self, dataset_id: str) -> str:
