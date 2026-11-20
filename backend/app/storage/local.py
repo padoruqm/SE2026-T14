@@ -130,14 +130,13 @@ class LocalDatasetStorage:
         if result.is_symlink() or not result.is_dir():
             return None
 
-        candidate = result / relative_path
-        if os.path.realpath(candidate) != os.path.normpath(os.path.abspath(candidate)):
+        # Resolve the result once, so a symlink *above* it (a symlinked storage root,
+        # or /var -> /private/var on macOS) is fine; only links below it are refused.
+        base = result.resolve()
+        target = Path(os.path.normpath(base / relative_path))
+        if not target.is_relative_to(base) or Path(os.path.realpath(target)) != target:
             return None
-        if not Path(os.path.normpath(os.path.abspath(candidate))).is_relative_to(
-            result.resolve()
-        ):
-            return None
-        return candidate if candidate.is_file() else None
+        return target if target.is_file() else None
 
     def has_converted(self, dataset_id: str) -> bool:
         return (self._converted_root / dataset_id).is_dir()
