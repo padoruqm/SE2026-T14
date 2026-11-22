@@ -95,6 +95,7 @@ async def upload_point_cloud(
 
 _POINT_CLOUD_ERRORS: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Point cloud not found"},
+    410: {"model": ErrorResponse, "description": "Point cloud is no longer available"},
 }
 
 
@@ -117,5 +118,5 @@ async def get_point_cloud(
             if found.status == "ready"
             else None
         ),
-        sourceId=None,
+        sourceId=found.source_id,
     )

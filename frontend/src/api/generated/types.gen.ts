@@ -19,7 +19,8 @@ export type PointCloudDetail = PointCloud & {
      * Set only when the viewer resources are ready. Every file of the
      * conversion result is served under `/api/pointcloud/{id}/viewer/`
      * (with Range support); that route is not described here because it
-     * returns opaque files, not JSON.
+     * returns opaque files, not JSON. It answers 404 for an unknown ID and
+     * 410 when the point cloud existed but its data is gone.
      *
      */
     viewerUrl?: string | null;
@@ -75,7 +76,7 @@ export type JobError = {
     message: string;
 };
 
-export type ErrorCode = 'BAD_REQUEST' | 'VALIDATION_ERROR' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_FILE_TYPE' | 'INVALID_POINT_CLOUD' | 'NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'CONFLICT' | 'INTERNAL_ERROR';
+export type ErrorCode = 'BAD_REQUEST' | 'VALIDATION_ERROR' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_FILE_TYPE' | 'INVALID_POINT_CLOUD' | 'NOT_FOUND' | 'GONE' | 'METHOD_NOT_ALLOWED' | 'CONFLICT' | 'INTERNAL_ERROR';
 
 export type ErrorResponse = {
     error: {
@@ -152,6 +153,12 @@ export type GetPointCloudErrors = {
      * The resource does not exist
      */
     404: ErrorResponse;
+    /**
+     * The resource existed but its data is no longer available, for example a
+     * result that was removed. A resource that never existed is `NotFound`.
+     *
+     */
+    410: ErrorResponse;
     /**
      * Unexpected server error; internal details are never exposed
      */

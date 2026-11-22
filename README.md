@@ -71,6 +71,17 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 
 `GET /api/pointcloud/{id}` trả tên file gốc (đã bỏ đường dẫn), metadata đọc từ header LAS (`pointCount`, `bounds`, `crs`) và `status`: `converting` khi có job convert đang chạy, `ready` khi đã có kết quả, `failed` khi job gần nhất lỗi và chưa có kết quả, còn lại là `uploaded`. Khi `ready`, `viewerUrl` trỏ tới `/api/pointcloud/{id}/viewer/metadata.json`; mọi file trong kết quả convert được phục vụ dưới `/api/pointcloud/{id}/viewer/…` (hỗ trợ Range cho octree). Đường dẫn thoát khỏi thư mục kết quả hoặc đi qua symlink trả `404`. Tên file và metadata được lưu ở `<APP_STORAGE_ROOT>/metadata/<id>.json`, nên còn sau khi backend restart; file upload từ trước khi có bản ghi này trả `404`.
 
+**Dataset kết quả (S3-Q2).** Kết quả của một job dẫn xuất (ví dụ crop) là dataset riêng: có ID `pc_…` mới, có bản ghi metadata riêng, và `sourceId` trỏ về dataset gốc (dataset upload có `sourceId: null`). `DatasetService.create_result(source_id, filename, metadata, converted)` tạo nó từ thư mục viewer-ready; ID mới được cấp ở đây, nên job crop chỉ cần trả ID này làm `resultId`. Lỗi khi truy cập:
+
+| Tình huống | Detail và file viewer |
+|---|---|
+| ID chưa từng có | `404 NOT_FOUND` |
+| Có bản ghi nhưng dữ liệu đã mất: kết quả không còn thư mục viewer, hoặc upload chưa convert mà file gốc đã bị xoá | `410 GONE` |
+| Upload chưa convert (còn file gốc) | detail `200` với `status: uploaded`; file viewer `404` |
+| File không có trong kết quả còn nguyên | `404 NOT_FOUND` |
+
+Frontend coi `GONE` như "không tìm thấy" (kind `notFound`) với thông báo riêng.
+
 Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
 PotreeConverter báo phần trăm tiến độ trong lúc xử lý; backend đưa giá trị đó vào `Job.progress` để UI polling hiển thị. Giá trị `100` chỉ xuất hiện khi kết quả đã được publish thành công; `null` vẫn được dùng nếu processor không cung cấp tiến độ đo được.
