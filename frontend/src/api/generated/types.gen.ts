@@ -57,6 +57,14 @@ export type ConvertRequest = {
     force?: boolean;
 };
 
+export type CropRequest = {
+    bounds: Bounds;
+    /**
+     * Format of the cropped point cloud
+     */
+    outputFormat?: 'las' | 'laz';
+};
+
 export type Job = {
     id: string;
     type: 'convert' | 'crop' | 'filter';
@@ -65,6 +73,11 @@ export type Job = {
      * Null when the processor cannot measure progress
      */
     progress: number | null;
+    /**
+     * Set when the job succeeds. For a conversion it is the converted point
+     * cloud; for a crop or filter it is the new point cloud with the result.
+     *
+     */
     resultId: string | null;
     error: JobError | null;
 };
@@ -217,6 +230,48 @@ export type ConvertPointCloudResponses = {
 };
 
 export type ConvertPointCloudResponse = ConvertPointCloudResponses[keyof ConvertPointCloudResponses];
+
+export type CropPointCloudData = {
+    body: CropRequest;
+    path: {
+        /**
+         * Opaque point cloud ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/pointcloud/{id}/crop';
+};
+
+export type CropPointCloudErrors = {
+    /**
+     * The resource does not exist
+     */
+    404: ErrorResponse;
+    /**
+     * The resource is not in a state that allows this request
+     */
+    409: ErrorResponse;
+    /**
+     * The request or the point cloud data is invalid
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error; internal details are never exposed
+     */
+    500: ErrorResponse;
+};
+
+export type CropPointCloudError = CropPointCloudErrors[keyof CropPointCloudErrors];
+
+export type CropPointCloudResponses = {
+    /**
+     * Crop job accepted
+     */
+    202: Job;
+};
+
+export type CropPointCloudResponse = CropPointCloudResponses[keyof CropPointCloudResponses];
 
 export type GetJobData = {
     body?: never;
