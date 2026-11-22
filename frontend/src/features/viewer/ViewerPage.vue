@@ -2,7 +2,14 @@
 import { computed, ref, useTemplateRef } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import { CropPanel, useCropSelection, type CropBounds } from '@/features/crop'
+import {
+  CropPanel,
+  CropRequest,
+  useCropRequest,
+  useCropSelection,
+  type CropBounds,
+  type CropOutputFormat,
+} from '@/features/crop'
 import type { Vec3 } from '@/features/measure'
 import { MeasurePanel, distanceUnit, formatLength, useMeasure } from '@/features/measure'
 import EmptyState from '@/shared/EmptyState.vue'
@@ -53,6 +60,12 @@ function toggleCropPicking(): void {
   }
   measure.stop()
   crop.startPicking()
+}
+
+const cropRequest = useCropRequest(() => props.id)
+
+function submitCrop(format: CropOutputFormat): void {
+  if (crop.bounds.value) void cropRequest.submit(crop.bounds.value, format)
 }
 
 function onPick(point: Vec3): void {
@@ -145,6 +158,16 @@ const conversionFailed = computed(() => pointCloud.value?.status === 'failed')
         @toggle-picking="toggleCropPicking"
         @change="crop.setBounds"
         @clear="crop.clear"
+      />
+      <CropRequest
+        :bounds="crop.bounds.value"
+        :state="cropRequest.state.value"
+        :progress="cropRequest.progress.value"
+        :result-id="cropRequest.resultId.value"
+        :error="cropRequest.error.value"
+        :retryable="cropRequest.retryable.value"
+        @submit="submitCrop"
+        @retry="cropRequest.retry"
       />
       <MetadataPanel :id="id" />
     </template>
