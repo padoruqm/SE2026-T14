@@ -25,12 +25,12 @@ from las_fixtures import build_las
 def _sample_las() -> bytes:
     points = b"".join(
         struct.pack("<iiiHBBbBHd", x, y, z, 100, 0x09, 2, 0, 0, 0, 0.0)
-        for x, y, z in ((0, 0, 0), (100, 100, 100), (200, 200, 200))
+        for x, y, z in ((0, 0, 0), (100, 200, 300), (200, 400, 600))
     )
     return build_las(
         point_count=3,
         min_xyz=(0, 0, 0),
-        max_xyz=(2, 2, 2),
+        max_xyz=(2, 4, 6),
         payload=points,
     )
 
@@ -59,11 +59,11 @@ class PdalCropProcessorTest(unittest.TestCase):
         self.parameters = {
             "bounds": {
                 "minX": 0.5,
-                "minY": 0.5,
-                "minZ": 0.5,
+                "minY": 1.5,
+                "minZ": 2.5,
                 "maxX": 1.5,
-                "maxY": 1.5,
-                "maxZ": 1.5,
+                "maxY": 2.5,
+                "maxZ": 3.5,
             },
             "output_format": "las",
         }
@@ -88,11 +88,11 @@ class PdalCropProcessorTest(unittest.TestCase):
         self.assertEqual(
             {
                 "minx": 0.5,
-                "miny": 0.5,
-                "minz": 0.5,
+                "miny": 1.5,
+                "minz": 2.5,
                 "maxx": 1.5,
-                "maxy": 1.5,
-                "maxz": 1.5,
+                "maxy": 2.5,
+                "maxz": 3.5,
             },
             pipeline[1]["bounds"],
         )
@@ -264,8 +264,17 @@ class PdalCropProcessorTest(unittest.TestCase):
                 output_path = result.output_directory / f"cropped.{output_format}"
                 metadata = parse_las_metadata(output_path.read_bytes())
                 self.assertEqual(1, metadata.point_count)
-                self.assertEqual(1.0, metadata.bounds.minX)
-                self.assertEqual(1.0, metadata.bounds.maxX)
+                self.assertEqual(
+                    (1.0, 2.0, 3.0, 1.0, 2.0, 3.0),
+                    (
+                        metadata.bounds.minX,
+                        metadata.bounds.minY,
+                        metadata.bounds.minZ,
+                        metadata.bounds.maxX,
+                        metadata.bounds.maxY,
+                        metadata.bounds.maxZ,
+                    ),
+                )
 
     def test_rejects_non_positive_timeout(self) -> None:
         with self.assertRaises(ValueError):
