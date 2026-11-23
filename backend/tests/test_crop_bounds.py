@@ -9,7 +9,14 @@ DATASET = LasBounds(minX=0.0, minY=0.0, minZ=10.0, maxX=100.0, maxY=50.0, maxZ=2
 
 
 def region(**overrides: float) -> dict[str, float]:
-    bounds = {"minX": 10.0, "minY": 10.0, "minZ": 12.0, "maxX": 20.0, "maxY": 30.0, "maxZ": 18.0}
+    bounds = {
+        "minX": 10.0,
+        "minY": 10.0,
+        "minZ": 12.0,
+        "maxX": 20.0,
+        "maxY": 30.0,
+        "maxZ": 18.0,
+    }
     bounds.update(overrides)
     return bounds
 
@@ -23,7 +30,8 @@ class ValidateCropBoundsTest(unittest.TestCase):
 
     def test_accepts_a_region_larger_than_the_point_cloud(self) -> None:
         validate_crop_bounds(
-            region(minX=-1e6, minY=-1e6, minZ=-1e6, maxX=1e6, maxY=1e6, maxZ=1e6), DATASET
+            region(minX=-1e6, minY=-1e6, minZ=-1e6, maxX=1e6, maxY=1e6, maxZ=1e6),
+            DATASET,
         )
 
     def test_accepts_a_zero_height_region(self) -> None:
