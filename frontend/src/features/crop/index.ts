@@ -12,3 +12,5 @@ export {
 export { default as CropOverlay } from './CropOverlay.vue'
 export { default as CropPanel } from './CropPanel.vue'
 export { useCropSelection } from './useCropSelection'
+export { default as CropRequest } from './CropRequest.vue'
+export { useCropRequest, type CropOutputFormat, type CropRequestState } from './useCropRequest'

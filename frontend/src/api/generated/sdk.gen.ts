@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
+import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, CropPointCloudData, CropPointCloudErrors, CropPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -48,6 +48,23 @@ export const getPointCloud = <ThrowOnError extends boolean = false>(options: Opt
  */
 export const convertPointCloud = <ThrowOnError extends boolean = false>(options: Options<ConvertPointCloudData, ThrowOnError>): RequestResult<ConvertPointCloudResponses, ConvertPointCloudErrors, ThrowOnError> => (options.client ?? client).post<ConvertPointCloudResponses, ConvertPointCloudErrors, ThrowOnError>({
     url: '/api/pointcloud/{id}/convert',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start a job that crops a point cloud to a box
+ *
+ * `bounds` is in world coordinates, the same frame as `metadata.bounds`.
+ * The job's `resultId` is the ID of the new point cloud that holds the
+ * cropped points; its `sourceId` points back to this one.
+ *
+ */
+export const cropPointCloud = <ThrowOnError extends boolean = false>(options: Options<CropPointCloudData, ThrowOnError>): RequestResult<CropPointCloudResponses, CropPointCloudErrors, ThrowOnError> => (options.client ?? client).post<CropPointCloudResponses, CropPointCloudErrors, ThrowOnError>({
+    url: '/api/pointcloud/{id}/crop',
     ...options,
     headers: {
         'Content-Type': 'application/json',

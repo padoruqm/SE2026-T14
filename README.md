@@ -191,6 +191,16 @@ Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai 
 - Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. Đã xác minh trên Potree 1.8.2 thật với fixture E2E (offset UTM 500000/2000000, #86): hai điểm chọn cho X/Y của vùng crop khớp đúng tọa độ Measure đọc được, Z lấy theo dải của dataset, và chọn góc theo thứ tự ngược cho cùng một hộp.
 - Chưa kéo thả hộp trực tiếp trong viewer; chọn bằng hai click hoặc nhập số.
 
+## Gửi yêu cầu crop (S3-D1)
+
+Sau khi chọn vùng trong panel **Crop region**, panel **Crop** gửi vùng đó tới `POST /api/pointcloud/{id}/crop`:
+
+- Chọn định dạng đầu ra **LAZ** (mặc định, có nén) hoặc **LAS**, rồi bấm **Crop point cloud**. Nút bị khoá cho tới khi có vùng hợp lệ; vùng rỗng hoặc nằm ngoài point cloud hiện lỗi và không được gửi.
+- `bounds` gửi đi là tọa độ world, đúng hộp hiển thị ở panel (đã sắp lại min/max và cắt theo point cloud).
+- Panel theo dõi job (`queued`, `running` kèm %, `succeeded`, `failed`). Khi xong có link mở point cloud mới (`resultId`); point cloud gốc không đổi.
+- Thông báo lỗi lấy theo `error.code` cố định, không hiển thị text từ server. **Try again** chỉ hiện khi thử lại có ích (lỗi mạng hoặc lỗi server), không hiện cho `409` (point cloud chưa sẵn sàng) hay `422` (vùng không hợp lệ).
+- Backend cho endpoint này là #32; trước khi nó được merge, có thể thử giao diện với `npm run mock`.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
