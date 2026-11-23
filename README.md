@@ -28,7 +28,7 @@ Mở frontend tại `http://localhost:5173`; health endpoint backend là `http:/
 
 Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Image cũng cài PDAL 2.10.2 từ conda-forge để processor crop xử lý LAS/LAZ và xuất LAS/LAZ; phiên bản được pin trong `backend/Dockerfile`, nơi build chạy integration test crop fixture với cả hai định dạng. Test chuyển đổi Potree LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ của PotreeConverter vẫn chờ spike #14.
 
-Compose build backend image có PotreeConverter 2.1.1 và PDAL 2.10.2. API convert gọi PotreeConverter qua job nền. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải xác nhận luồng upload → conversion với LAZ; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ. Processor crop PDAL là adapter riêng; API crop chưa được tích hợp trong phạm vi processor issue.
+Compose build backend image có PotreeConverter 2.1.1 và PDAL 2.10.2. API convert gọi PotreeConverter qua job nền. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Adapter nhận cả LAS và LAZ (#32): upload LAZ convert được, đã chạy với binary thật trong image. PotreeConverter không nén output thành LAZ. Crop dùng PDAL qua API `POST /api/pointcloud/{id}/crop` (xem phần Crop API bên dưới).
 
 ## Chạy backend foundation
 
@@ -191,6 +191,15 @@ Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai 
 - Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. Đã xác minh trên Potree 1.8.2 thật với fixture E2E (offset UTM 500000/2000000, #86): hai điểm chọn cho X/Y của vùng crop khớp đúng tọa độ Measure đọc được, Z lấy theo dải của dataset, và chọn góc theo thứ tự ngược cho cùng một hộp.
 - Chưa kéo thả hộp trực tiếp trong viewer; chọn bằng hai click hoặc nhập số.
 
+## Crop API (S3-D2)
+
+`POST /api/pointcloud/{id}/crop` với body `{"bounds": {minX..maxZ}, "outputFormat": "laz"}` (tọa độ world, `outputFormat` là `las` hoặc `laz`, mặc định `laz`) trả `202` và một job `crop`. Poll `GET /api/job/{id}` như convert.
+
+- **Kiểm tra trước khi tạo job** (không job, không file nào được tạo nếu bị từ chối): `404` nếu không có point cloud, `410` nếu dữ liệu đã mất, `409` nếu point cloud không có file để crop, `422 VALIDATION_ERROR` nếu min lớn hơn max, vùng không có diện tích X/Y (cho phép chiều cao 0), vùng không chạm point cloud (chỉ chạm cạnh không tính), giá trị không phải số hữu hạn (`NaN`, `Infinity`, boolean, chuỗi) hoặc có trường lạ. Luật giống viewer (`cropBounds.ts`), nằm ở `app/services/crop_bounds.py`.
+- **Job:** PDAL crop file gốc → nếu không còn điểm nào thì job `failed` với `EMPTY_RESULT` → PotreeConverter convert file đã crop cho viewer → tạo point cloud mới (`resultId`) có `sourceId` trỏ về bản gốc, tên `<tên gốc>-crop.<định dạng>`, metadata đọc từ file đã crop. File LAS/LAZ đã crop được lưu cùng kết quả nên có thể tải về (#37) hoặc crop tiếp. Bản gốc không bị đổi.
+- **Lỗi:** `INVALID_POINT_CLOUD` (file đầu vào bị từ chối), `INTERNAL_ERROR` (PDAL/converter lỗi hoặc timeout; output của tiến trình được ghi log, không trả cho client), `EMPTY_RESULT`. Job lỗi không để lại upload, record hay file viewer nào.
+- **Progress:** tới 40 trong lúc crop, phần còn lại theo tiến độ convert; `100` chỉ khi kết quả đã được đăng ký. Timeout dùng chung `APP_JOB_TIMEOUT_SECONDS`.
+
 ## Gửi yêu cầu crop (S3-D1)
 
 Sau khi chọn vùng trong panel **Crop region**, panel **Crop** gửi vùng đó tới `POST /api/pointcloud/{id}/crop`:
@@ -199,7 +208,6 @@ Sau khi chọn vùng trong panel **Crop region**, panel **Crop** gửi vùng đ�
 - `bounds` gửi đi là tọa độ world, đúng hộp hiển thị ở panel (đã sắp lại min/max và cắt theo point cloud).
 - Panel theo dõi job (`queued`, `running` kèm %, `succeeded`, `failed`). Khi xong có link mở point cloud mới (`resultId`); point cloud gốc không đổi.
 - Thông báo lỗi lấy theo `error.code` cố định, không hiển thị text từ server. **Try again** chỉ hiện khi thử lại có ích (lỗi mạng hoặc lỗi server), không hiện cho `409` (point cloud chưa sẵn sàng) hay `422` (vùng không hợp lệ).
-- Backend cho endpoint này là #32; trước khi nó được merge, có thể thử giao diện với `npm run mock`.
 
 ## API contract và mock
 
