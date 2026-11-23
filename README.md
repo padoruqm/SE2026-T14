@@ -26,11 +26,9 @@ docker compose up --build
 
 Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
 
-Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Test chuyển đổi LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ vẫn chờ spike #14.
+Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin bằng SHA-256 và gọi qua processing adapter. Image cũng cài PDAL 2.10.2 từ conda-forge để processor crop xử lý LAS/LAZ và xuất LAS/LAZ; phiên bản được pin trong `backend/Dockerfile`, nơi build chạy integration test crop fixture với cả hai định dạng. Test chuyển đổi Potree LAS dùng fixture nhỏ tự sinh; hỗ trợ LAZ của PotreeConverter vẫn chờ spike #14.
 
-Compose build backend image có PotreeConverter 2.1.1, và API convert gọi adapter qua job nền. PDAL chưa được cài. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải xác nhận luồng upload → conversion với LAZ; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ.
-
-PDAL cần được xử lý riêng.
+Compose build backend image có PotreeConverter 2.1.1 và PDAL 2.10.2. API convert gọi PotreeConverter qua job nền. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Đây là xác minh khả năng đọc LAZ của converter, không phải xác nhận luồng upload → conversion với LAZ; adapter hiện vẫn chỉ nhận LAS. PotreeConverter cũng không nén output thành LAZ. Processor crop PDAL là adapter riêng; API crop chưa được tích hợp trong phạm vi processor issue.
 
 ## Chạy backend foundation
 
@@ -71,6 +69,8 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 
 `GET /api/pointcloud/{id}` trả tên file gốc (đã bỏ đường dẫn), metadata đọc từ header LAS (`pointCount`, `bounds`, `crs`) và `status`: `converting` khi có job convert đang chạy, `ready` khi đã có kết quả, `failed` khi job gần nhất lỗi và chưa có kết quả, còn lại là `uploaded`. Khi `ready`, `viewerUrl` trỏ tới `/api/pointcloud/{id}/viewer/metadata.json`; mọi file trong kết quả convert được phục vụ dưới `/api/pointcloud/{id}/viewer/…` (hỗ trợ Range cho octree). Đường dẫn thoát khỏi thư mục kết quả hoặc đi qua symlink trả `404`. Tên file và metadata được lưu ở `<APP_STORAGE_ROOT>/metadata/<id>.json`, nên còn sau khi backend restart; file upload từ trước khi có bản ghi này trả `404`.
 
+Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. `PdalCropProcessor` dùng `APP_PDAL_PATH` (trong image trỏ tới wrapper cấu hình thư viện PDAL). Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
+
 **Dataset kết quả (S3-Q2).** Kết quả của một job dẫn xuất (ví dụ crop) là dataset riêng: có ID `pc_…` mới, có bản ghi metadata riêng, và `sourceId` trỏ về dataset gốc (dataset upload có `sourceId: null`). `DatasetService.create_result(source_id, filename, metadata, converted)` tạo nó từ thư mục viewer-ready; ID mới được cấp ở đây, nên job crop chỉ cần trả ID này làm `resultId`. Lỗi khi truy cập:
 
 | Tình huống | Detail và file viewer |
@@ -81,8 +81,6 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 | File không có trong kết quả còn nguyên | `404 NOT_FOUND` |
 
 Frontend coi `GONE` như "không tìm thấy" (kind `notFound`) với thông báo riêng.
-
-Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
 PotreeConverter báo phần trăm tiến độ trong lúc xử lý; backend đưa giá trị đó vào `Job.progress` để UI polling hiển thị. Giá trị `100` chỉ xuất hiện khi kết quả đã được publish thành công; `null` vẫn được dùng nếu processor không cung cấp tiến độ đo được.
 

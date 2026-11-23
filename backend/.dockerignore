@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 venv/
 tests/
+!tests/
+tests/*
+!tests/test_pdal_crop.py
+!tests/las_fixtures.py
