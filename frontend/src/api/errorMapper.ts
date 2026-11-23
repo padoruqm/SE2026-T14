@@ -57,6 +57,13 @@ const BY_CODE: Record<ErrorCode, MappedError> = {
     message: 'This point cloud was not found.',
     retryable: false,
   },
+  // Shown like a missing point cloud: either way there is nothing to open, and the
+  // viewer sends the person back to upload.
+  GONE: {
+    kind: 'notFound',
+    message: 'This point cloud is no longer available.',
+    retryable: false,
+  },
   INTERNAL_ERROR: UNEXPECTED,
 }
 

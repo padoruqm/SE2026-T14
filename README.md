@@ -71,6 +71,17 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 
 Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. `PdalCropProcessor` dùng `APP_PDAL_PATH` (trong image trỏ tới wrapper cấu hình thư viện PDAL). Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
+**Dataset kết quả (S3-Q2).** Kết quả của một job dẫn xuất (ví dụ crop) là dataset riêng: có ID `pc_…` mới, có bản ghi metadata riêng, và `sourceId` trỏ về dataset gốc (dataset upload có `sourceId: null`). `DatasetService.create_result(source_id, filename, metadata, converted)` tạo nó từ thư mục viewer-ready; ID mới được cấp ở đây, nên job crop chỉ cần trả ID này làm `resultId`. Lỗi khi truy cập:
+
+| Tình huống | Detail và file viewer |
+|---|---|
+| ID chưa từng có | `404 NOT_FOUND` |
+| Có bản ghi nhưng dữ liệu đã mất: kết quả không còn thư mục viewer, hoặc upload chưa convert mà file gốc đã bị xoá | `410 GONE` |
+| Upload chưa convert (còn file gốc) | detail `200` với `status: uploaded`; file viewer `404` |
+| File không có trong kết quả còn nguyên | `404 NOT_FOUND` |
+
+Frontend coi `GONE` như "không tìm thấy" (kind `notFound`) với thông báo riêng.
+
 PotreeConverter báo phần trăm tiến độ trong lúc xử lý; backend đưa giá trị đó vào `Job.progress` để UI polling hiển thị. Giá trị `100` chỉ xuất hiện khi kết quả đã được publish thành công; `null` vẫn được dùng nếu processor không cung cấp tiến độ đo được.
 
 Có thể xem tài liệu tương tác tại `http://127.0.0.1:8000/docs`.
@@ -169,6 +180,16 @@ Trang `/viewer/:id` có nút **Measure**. Khi bật, con trỏ trên viewer thà
 Cách hoạt động: `potreeViewer.ts` là chỗ duy nhất gọi Potree. `enableMeasure` dùng `Potree.Utils.getMousePointCloudIntersection`; vị trí trả về đã nhân `matrixWorld` của point cloud nên là tọa độ world theo công thức ở phần spike #25. Phép tính khoảng cách nằm trong `features/measure/measurement.ts`; marker được chiếu về pixel bằng `projectToScreen` (tính bằng double, không qua buffer 32-bit) và đặt lại sau mỗi frame. Chỉ chọn điểm trên điểm point cloud, không nội suy giữa các điểm, nên độ chính xác phụ thuộc mật độ điểm và point budget.
 
 Checklist thủ công cho viewer và Measure (kèm mẫu bản ghi bằng chứng) nằm ở [frontend/MANUAL_CHECKLIST.md](frontend/MANUAL_CHECKLIST.md).
+
+## Chọn vùng Crop (S3-Q1)
+
+Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai góc đối diện của vùng trong viewer (dùng cùng cơ chế chọn điểm với Measure, nên Measure và Crop không bật cùng lúc), hoặc gõ sáu giá trị Min/Max X/Y/Z. Kết quả là `{minX, minY, minZ, maxX, maxY, maxZ}` theo **tọa độ world**, đúng schema `Bounds` trong `openapi.yaml`, hiển thị trong panel và vẽ thành hộp 3D trên viewer. Nút **Clear** xoá vùng.
+
+- Hai điểm chọn nằm trên bề mặt point cloud nên chiều cao (Z) lấy từ `metadata.bounds` của dataset; có thể sửa tay.
+- `features/crop/cropBounds.ts` là các hàm thuần: `normalizeBounds` (đảo min/max khi kéo ngược), `isEmpty` (vùng không có diện tích X hoặc Y; chiều cao 0 vẫn hợp lệ vì dataset phẳng), `clampToDatasetBounds` (cắt vào `metadata.bounds`; chỉ chạm cạnh không tính là giao), `resolveCropBounds` (gộp các bước trên, trả `INVALID`, `EMPTY` hoặc `OUTSIDE_DATASET`). Crop API và UI nên dùng chung các hàm này.
+- Giá trị `bounds` đầu ra là `useCropSelection().bounds` (null khi chưa có vùng hợp lệ); #31 đọc giá trị này.
+- Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. Đã xác minh trên Potree 1.8.2 thật với fixture E2E (offset UTM 500000/2000000, #86): hai điểm chọn cho X/Y của vùng crop khớp đúng tọa độ Measure đọc được, Z lấy theo dải của dataset, và chọn góc theo thứ tự ngược cho cùng một hộp.
+- Chưa kéo thả hộp trực tiếp trong viewer; chọn bằng hai click hoặc nhập số.
 
 ## API contract và mock
 

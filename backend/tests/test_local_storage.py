@@ -242,5 +242,54 @@ class DatasetRecordTest(unittest.IsolatedAsyncioTestCase):
         self.storage.discard_upload("../etc")
 
 
+class ConvertedFileTest(unittest.TestCase):
+    """converted_file must accept a storage root that sits behind a symlink.
+
+    On macOS the temp directory is /var -> /private/var, and a deployment may mount
+    its storage through a symlink; only links *inside* a result are suspicious.
+    """
+
+    def setUp(self) -> None:
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.base = Path(self.temporary_directory.name)
+        self.real_root = self.base / "real"
+        result = self.real_root / "converted" / "pc_1"
+        (result / "nested").mkdir(parents=True)
+        (result / "metadata.json").write_text("{}", encoding="utf-8")
+        (result / "nested" / "hierarchy.bin").write_bytes(b"h")
+        (self.base / "secret.txt").write_text("secret", encoding="utf-8")
+        self.linked_root = self.base / "linked"
+        self.linked_root.symlink_to(self.real_root)
+
+    def tearDown(self) -> None:
+        self.temporary_directory.cleanup()
+
+    def test_serves_files_when_the_storage_root_is_a_symlink(self) -> None:
+        storage = LocalDatasetStorage(self.linked_root, MAX_UPLOAD_BYTES)
+
+        for path in ("metadata.json", "nested/hierarchy.bin"):
+            with self.subTest(path=path):
+                found = storage.converted_file("pc_1", path)
+                self.assertIsNotNone(found)
+                self.assertTrue(found.is_file())
+
+    def test_still_refuses_to_leave_the_result_through_a_symlinked_root(self) -> None:
+        storage = LocalDatasetStorage(self.linked_root, MAX_UPLOAD_BYTES)
+
+        for path in ("../../../secret.txt", "nested/../../../../secret.txt", "/etc/passwd"):
+            with self.subTest(path=path):
+                self.assertIsNone(storage.converted_file("pc_1", path))
+
+    def test_still_refuses_a_symlink_inside_the_result(self) -> None:
+        result = self.real_root / "converted" / "pc_1"
+        (result / "leak.txt").symlink_to(self.base / "secret.txt")
+        (result / "outside").symlink_to(self.base)
+        storage = LocalDatasetStorage(self.linked_root, MAX_UPLOAD_BYTES)
+
+        for path in ("leak.txt", "outside/secret.txt"):
+            with self.subTest(path=path):
+                self.assertIsNone(storage.converted_file("pc_1", path))
+
+
 if __name__ == "__main__":
     unittest.main()
