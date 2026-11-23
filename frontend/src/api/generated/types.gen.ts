@@ -253,6 +253,12 @@ export type CropPointCloudErrors = {
      */
     409: ErrorResponse;
     /**
+     * The resource existed but its data is no longer available, for example a
+     * result that was removed. A resource that never existed is `NotFound`.
+     *
+     */
+    410: ErrorResponse;
+    /**
      * The request or the point cloud data is invalid
      */
     422: ErrorResponse;
