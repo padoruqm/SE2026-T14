@@ -22,7 +22,10 @@ Cần Docker Engine với Docker Compose plugin. Từ thư mục gốc repositor
 
 ```bash
 docker compose up --build
+./scripts/smoke-test.sh     # khi stack đã lên: upload → convert → viewer files → PDAL
 ```
+
+Backend chạy ở `linux/amd64` vì PotreeConverter chỉ có bản x86-64; trên Apple Silicon Docker giả lập nên build chậm hơn nhưng convert chạy được. Image frontend tải Potree bằng `scripts/fetch-potree.sh` (qua build context `scripts` trong `compose.yaml`), nên cần Docker Compose ≥ 2.17. Kết quả chạy trên bản clone sạch nằm ở [docs/clean-machine-test.md](docs/clean-machine-test.md).
 
 Mở frontend tại `http://localhost:5173`; health endpoint backend là `http://localhost:8000/health`. Frontend chuyển tiếp `/api/` tới backend, nên không cần đặt URL backend trong trình duyệt. Upload được lưu trong named volume `point-cloud-data`; dừng dịch vụ bằng `docker compose down`. Các cổng và giới hạn upload có thể đổi qua biến môi trường `FRONTEND_PORT`, `BACKEND_PORT` và `APP_MAX_UPLOAD_BYTES`; không cần tạo hoặc commit `.env`.
 
@@ -138,7 +141,7 @@ npm run test:e2e                                # tự chạy Vite dev server
 - **Hạn chế cần xử lý ở các task sau:**
   - `Potree.loadPointCloud` không reject khi URL sai (chỉ `console.error`), nên phía gọi cần timeout hoặc kiểm tra URL trước.
   - Potree dựa vào global (`window.Potree`, `$`).
-  - `frontend/Dockerfile` chưa chạy `fetch-potree.sh`. Cần thêm bước này khi viewer được dùng trong Compose.
+  - `frontend/Dockerfile` đã chạy `fetch-potree.sh` (S3-Q4), nên viewer dùng được trong Compose.
 - **Khi nào đổi hướng:** nếu sau này phải bỏ global hoặc Potree 1.8.2 gặp lỗi không sửa được thì cân nhắc [`potree-core`](https://www.npmjs.com/package/potree-core) (ESM, bundle được bằng Vite). Đổi lại, nhóm phải tự làm công cụ đo và cắt mà Potree 1.8.2 đã có sẵn cho S2/S3.
 
 ## Spike #25: Tọa độ viewer → world
