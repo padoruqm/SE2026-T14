@@ -42,6 +42,11 @@ const BY_CODE: Record<ErrorCode, MappedError> = {
     retryable: false,
   },
   METHOD_NOT_ALLOWED: UNEXPECTED,
+  EMPTY_RESULT: {
+    kind: 'processing',
+    message: 'The selected region contains no points.',
+    retryable: false,
+  },
   INVALID_POINT_CLOUD: {
     kind: 'processing',
     message: 'The file could not be read as a point cloud.',

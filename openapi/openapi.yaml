@@ -398,6 +398,7 @@ components:
         - GONE
         - METHOD_NOT_ALLOWED
         - CONFLICT
+        - EMPTY_RESULT
         - INTERNAL_ERROR
 
     ErrorResponse:

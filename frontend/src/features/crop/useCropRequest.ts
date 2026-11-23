@@ -23,6 +23,7 @@ const START_ERRORS: Record<string, string> = {
 const START_FALLBACK = 'The crop could not be started. Please try again.'
 const JOB_ERRORS: Record<string, string> = {
   INVALID_POINT_CLOUD: 'This point cloud could not be cropped.',
+  EMPTY_RESULT: 'The selected region contains no points. Choose a different region.',
 }
 const JOB_FALLBACK = 'The crop failed. Please try again.'
 

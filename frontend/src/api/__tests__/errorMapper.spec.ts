@@ -15,6 +15,7 @@ describe('mapError', () => {
     ['FILE_TOO_LARGE', 'validation', false],
     ['UNSUPPORTED_FILE_TYPE', 'validation', false],
     ['INVALID_POINT_CLOUD', 'processing', false],
+    ['EMPTY_RESULT', 'processing', false],
     ['CONFLICT', 'processing', false],
     ['NOT_FOUND', 'notFound', false],
     ['GONE', 'notFound', false],
