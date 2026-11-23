@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import struct
 import subprocess
@@ -193,14 +195,32 @@ class PotreeConverterProcessorTest(unittest.TestCase):
 
         self.assertEqual([99], progress)
 
-    def test_rejects_non_las_input(self) -> None:
-        laz_path = self.root / "sample.laz"
+    def test_rejects_input_that_is_not_las_or_laz(self) -> None:
+        for name in ("sample.txt", "sample.ply", "sample"):
+            with self.subTest(name=name):
+                path = self.root / name
+                path.write_bytes(b"LASF")
+
+                with self.assertRaises(ProcessingInputError):
+                    self.processor.execute(
+                        ProcessingContext(path, self.output_directory), {}
+                    )
+
+    def test_accepts_laz_input(self) -> None:
+        laz_path = self.root / "sample.LAZ"
         laz_path.write_bytes(b"LASF")
 
-        with self.assertRaises(ProcessingInputError):
-            self.processor.execute(
-                ProcessingContext(laz_path, self.output_directory), {}
-            )
+        def complete_conversion(command, **kwargs):
+            Path(command[3], "metadata.json").write_text("{}", encoding="utf-8")
+            return FakeProcess()
+
+        with patch(
+            "app.processing.potree_converter.subprocess.Popen",
+            side_effect=complete_conversion,
+        ) as popen:
+            self.processor.execute(ProcessingContext(laz_path, self.output_directory), {})
+
+        self.assertEqual(str(laz_path.resolve()), popen.call_args.args[0][1])
 
     def test_rejects_missing_input(self) -> None:
         missing_path = self.root / "missing.las"
@@ -272,6 +292,25 @@ class PotreeConverterProcessorTest(unittest.TestCase):
 
         self.assertTrue(result.metadata_path.is_file())
         self.assertGreater(len(list(result.output_directory.iterdir())), 1)
+
+    @unittest.skipUnless(
+        shutil.which("PotreeConverter") and shutil.which(os.getenv("APP_PDAL_PATH", "pdal")),
+        "PotreeConverter and PDAL are not installed",
+    )
+    def test_converts_a_laz_file(self) -> None:
+        _write_las_fixture(self.input_path)
+        laz_path = self.root / "sample.laz"
+        subprocess.run(
+            [os.getenv("APP_PDAL_PATH", "pdal"), "translate", str(self.input_path), str(laz_path)],
+            check=True,
+            capture_output=True,
+        )
+        self.assertEqual(b"LASF", laz_path.read_bytes()[:4])
+
+        result = self.processor.execute(ProcessingContext(laz_path, self.output_directory), {})
+
+        metadata = json.loads(result.metadata_path.read_text(encoding="utf-8"))
+        self.assertEqual(2, metadata["points"])
 
 
 if __name__ == "__main__":
