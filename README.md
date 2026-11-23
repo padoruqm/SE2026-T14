@@ -190,7 +190,7 @@ Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai 
 - Hai điểm chọn nằm trên bề mặt point cloud nên chiều cao (Z) lấy từ `metadata.bounds` của dataset; có thể sửa tay.
 - `features/crop/cropBounds.ts` là các hàm thuần: `normalizeBounds` (đảo min/max khi kéo ngược), `isEmpty` (vùng không có diện tích X hoặc Y; chiều cao 0 vẫn hợp lệ vì dataset phẳng), `clampToDatasetBounds` (cắt vào `metadata.bounds`; chỉ chạm cạnh không tính là giao), `resolveCropBounds` (gộp các bước trên, trả `INVALID`, `EMPTY` hoặc `OUTSIDE_DATASET`). Crop API và UI nên dùng chung các hàm này.
 - Giá trị `bounds` đầu ra là `useCropSelection().bounds` (null khi chưa có vùng hợp lệ); #31 đọc giá trị này.
-- Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. **CẦN XÁC MINH** trên trình duyệt thật với dataset có offset lớn.
+- Giả định theo kết luận #25: điểm chọn đã là world (đã cộng offset), và `metadata.bounds` từ header LAS cũng là world nên so sánh trực tiếp. Đã xác minh trên Potree 1.8.2 thật với fixture E2E (offset UTM 500000/2000000, #86): hai điểm chọn cho X/Y của vùng crop khớp đúng tọa độ Measure đọc được, Z lấy theo dải của dataset, và chọn góc theo thứ tự ngược cho cùng một hộp.
 - Chưa kéo thả hộp trực tiếp trong viewer; chọn bằng hai click hoặc nhập số.
 
 ## API contract và mock
