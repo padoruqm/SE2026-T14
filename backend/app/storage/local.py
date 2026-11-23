@@ -80,6 +80,39 @@ class LocalDatasetStorage:
         if upload is not None:
             upload.unlink(missing_ok=True)
 
+    def store_file(self, dataset_id: str, source: Path) -> Path:
+        """Move a finished point cloud file into the uploads under `dataset_id`.
+
+        Used for files the server made itself, such as a crop result, so they can be
+        found, downloaded and processed like an upload. The extension is kept; an
+        existing file is never replaced.
+        """
+        suffix = source.suffix.lower()
+        if not _DATASET_ID.fullmatch(dataset_id):
+            raise InvalidStorageKeyError("Invalid dataset id")
+        if not _SUFFIX.fullmatch(suffix) or suffix in _RESERVED_SUFFIXES:
+            raise InvalidStorageKeyError("Invalid file suffix")
+        if source.is_symlink() or not source.is_file():
+            raise InvalidStorageKeyError("The file to store does not exist")
+
+        self._upload_root.mkdir(parents=True, exist_ok=True)
+        destination = self._upload_root / f"{dataset_id}{suffix}"
+        if destination.exists() or destination.is_symlink():
+            raise InvalidStorageKeyError("A file is already stored for this dataset")
+        try:
+            source.rename(destination)
+        except OSError:
+            # Different filesystem: copy to a partial file, then swap it in.
+            partial = destination.with_suffix(f"{suffix}.part")
+            try:
+                shutil.copyfile(source, partial)
+                partial.replace(destination)
+            except BaseException:
+                partial.unlink(missing_ok=True)
+                raise
+            source.unlink()
+        return destination
+
     def write_record(self, dataset_id: str, record: Mapping[str, Any]) -> None:
         """Store small JSON metadata for a dataset, replacing any earlier record.
 
