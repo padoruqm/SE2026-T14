@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, CropPointCloudData, CropPointCloudErrors, CropPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
+import type { ConvertPointCloudData, ConvertPointCloudErrors, ConvertPointCloudResponses, CropPointCloudData, CropPointCloudErrors, CropPointCloudResponses, DownloadPointCloudData, DownloadPointCloudErrors, DownloadPointCloudResponses, GetJobData, GetJobErrors, GetJobResponses, GetPointCloudData, GetPointCloudErrors, GetPointCloudResponses, UploadPointCloudData, UploadPointCloudErrors, UploadPointCloudResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -42,6 +42,15 @@ export const uploadPointCloud = <ThrowOnError extends boolean = false>(options: 
  * Get a point cloud with its metadata and viewer URL
  */
 export const getPointCloud = <ThrowOnError extends boolean = false>(options: Options<GetPointCloudData, ThrowOnError>): RequestResult<GetPointCloudResponses, GetPointCloudErrors, ThrowOnError> => (options.client ?? client).get<GetPointCloudResponses, GetPointCloudErrors, ThrowOnError>({ url: '/api/pointcloud/{id}', ...options });
+
+/**
+ * Download a ready point cloud as LAS/LAZ
+ *
+ * Streams the stored LAS/LAZ source file with its recorded filename.
+ * Downloads are available only when the point cloud status is `ready`.
+ *
+ */
+export const downloadPointCloud = <ThrowOnError extends boolean = false>(options: Options<DownloadPointCloudData, ThrowOnError>): RequestResult<DownloadPointCloudResponses, DownloadPointCloudErrors, ThrowOnError> => (options.client ?? client).get<DownloadPointCloudResponses, DownloadPointCloudErrors, ThrowOnError>({ url: '/api/pointcloud/{id}/download', ...options });
 
 /**
  * Start the viewer conversion job for a point cloud

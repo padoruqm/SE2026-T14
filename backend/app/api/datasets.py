@@ -5,6 +5,7 @@ from dataclasses import asdict
 from typing import Any, Literal
 
 from fastapi import APIRouter, File, Request, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.errors import ErrorResponse, UnsupportedFileTypeError
@@ -98,6 +99,27 @@ _POINT_CLOUD_ERRORS: dict[int | str, dict[str, Any]] = {
     410: {"model": ErrorResponse, "description": "Point cloud is no longer available"},
 }
 
+_DOWNLOAD_RESPONSES: dict[int | str, dict[str, Any]] = {
+    200: {
+        "description": "LAS/LAZ file downloaded",
+        "headers": {
+            "Content-Disposition": {
+                "description": "Attachment filename from the point-cloud record",
+                "schema": {"type": "string"},
+            }
+        },
+        "content": {
+            "application/octet-stream": {
+                "schema": {"type": "string", "format": "binary"}
+            }
+        },
+    },
+    404: {"model": ErrorResponse, "description": "Point cloud not found"},
+    409: {"model": ErrorResponse, "description": "Point cloud is not ready"},
+    410: {"model": ErrorResponse, "description": "LAS/LAZ file is no longer available"},
+    500: {"model": ErrorResponse, "description": "Unexpected server error"},
+}
+
 
 @router.get(
     "/pointcloud/{point_cloud_id}",
@@ -119,4 +141,18 @@ async def get_point_cloud(
             else None
         ),
         sourceId=found.source_id,
+    )
+
+
+@router.get(
+    "/pointcloud/{point_cloud_id}/download",
+    response_class=FileResponse,
+    responses=_DOWNLOAD_RESPONSES,
+)
+async def download_point_cloud(point_cloud_id: str, request: Request) -> FileResponse:
+    dataset, source = _service(request).download_file(point_cloud_id)
+    return FileResponse(
+        source,
+        media_type="application/octet-stream",
+        filename=dataset.filename,
     )

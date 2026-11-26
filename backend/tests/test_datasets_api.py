@@ -23,6 +23,7 @@ class UploadApiTest(unittest.TestCase):
         )
         self.client = TestClient(create_app(settings), raise_server_exceptions=False)
         self.upload_root = Path(self.temporary_directory.name) / "uploads"
+        self.converted_root = Path(self.temporary_directory.name) / "converted"
 
     def tearDown(self) -> None:
         self.client.close()
@@ -86,6 +87,54 @@ class UploadApiTest(unittest.TestCase):
         stored_files = list(self.upload_root.glob("*.las"))
         self.assertEqual(1, len(stored_files))
         self.assertEqual(LAS_BYTES, stored_files[0].read_bytes())
+
+    def test_download_streams_ready_las_and_laz_with_the_original_filename(self) -> None:
+        for filename in ("survey.las", "survey.laz"):
+            with self.subTest(filename=filename):
+                upload = self._upload(filename, LAS_BYTES)
+                point_cloud_id = upload.json()["id"]
+                (self.converted_root / point_cloud_id).mkdir(parents=True)
+
+                response = self.client.get(
+                    f"/api/pointcloud/{point_cloud_id}/download"
+                )
+
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(
+                    "application/octet-stream", response.headers["content-type"]
+                )
+                self.assertEqual(
+                    f'attachment; filename="{filename}"',
+                    response.headers["content-disposition"],
+                )
+                self.assertEqual(LAS_BYTES, response.content)
+
+    def test_download_of_a_point_cloud_that_is_not_ready_returns_conflict(self) -> None:
+        upload = self._upload("survey.las", LAS_BYTES)
+
+        response = self.client.get(
+            f"/api/pointcloud/{upload.json()['id']}/download"
+        )
+
+        self._assert_error(response, 409, "CONFLICT")
+        self.assertIn("not ready", response.json()["error"]["message"].lower())
+
+    def test_download_of_an_unknown_point_cloud_returns_not_found(self) -> None:
+        response = self.client.get("/api/pointcloud/pc_missing/download")
+
+        self._assert_error(response, 404, "NOT_FOUND")
+
+    def test_download_of_a_ready_dataset_without_its_file_returns_gone(self) -> None:
+        upload = self._upload("survey.las", LAS_BYTES)
+        point_cloud_id = upload.json()["id"]
+        (self.converted_root / point_cloud_id).mkdir(parents=True)
+        (self.upload_root / f"{point_cloud_id}.las").unlink()
+
+        response = self.client.get(
+            f"/api/pointcloud/{point_cloud_id}/download"
+        )
+
+        self._assert_error(response, 410, "GONE")
 
     def test_upload_strips_client_path_from_filename(self) -> None:
         response = self._upload("..\\..\\evil/survey.laz", LAS_BYTES)

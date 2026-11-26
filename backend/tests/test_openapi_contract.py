@@ -71,6 +71,24 @@ class OpenApiContractTest(unittest.TestCase):
             self.assertIn(status, contract)
             self.assertIn(status, implemented)
 
+    def test_download_route_matches_the_binary_contract(self) -> None:
+        contract = self.spec["paths"]["/api/pointcloud/{id}/download"]["get"]
+        implemented = self.implemented["paths"][
+            "/api/pointcloud/{point_cloud_id}/download"
+        ]["get"]
+
+        for status in ("200", "404", "409", "410", "500"):
+            self.assertIn(status, contract["responses"])
+            self.assertIn(status, implemented["responses"])
+
+        media_type = "application/octet-stream"
+        self.assertIn(media_type, contract["responses"]["200"]["content"])
+        self.assertIn(media_type, implemented["responses"]["200"]["content"])
+        self.assertEqual(
+            "binary",
+            contract["responses"]["200"]["content"][media_type]["schema"]["format"],
+        )
+
     def test_point_cloud_detail_has_the_contract_fields(self) -> None:
         schemas = self.spec["components"]["schemas"]
         contract = _properties(schemas["PointCloud"]) | _properties(

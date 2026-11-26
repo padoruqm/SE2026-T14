@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.core.errors import (
+    ConflictError,
     FileTooLargeError,
     GoneError,
     InvalidPointCloudError,
@@ -119,6 +120,16 @@ class DatasetService:
             metadata=metadata,
             source_id=source_id,
         )
+
+    def download_file(self, dataset_id: str) -> tuple[StoredDataset, Path]:
+        dataset = self.get(dataset_id)
+        if dataset.status != "ready":
+            raise ConflictError("Point cloud is not ready for download")
+
+        source = self._storage.find(dataset_id)
+        if source is None:
+            raise GoneError("The LAS/LAZ file is no longer available")
+        return dataset, source
 
     def _is_lost(self, dataset_id: str, source_id: str | None) -> bool:
         if self._storage.has_converted(dataset_id):

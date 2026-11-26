@@ -189,6 +189,50 @@ export type GetPointCloudResponses = {
 
 export type GetPointCloudResponse = GetPointCloudResponses[keyof GetPointCloudResponses];
 
+export type DownloadPointCloudData = {
+    body?: never;
+    path: {
+        /**
+         * Opaque point cloud ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/pointcloud/{id}/download';
+};
+
+export type DownloadPointCloudErrors = {
+    /**
+     * The resource does not exist
+     */
+    404: ErrorResponse;
+    /**
+     * Point cloud is not ready for download
+     */
+    409: ErrorResponse;
+    /**
+     * The resource existed but its data is no longer available, for example a
+     * result that was removed. A resource that never existed is `NotFound`.
+     *
+     */
+    410: ErrorResponse;
+    /**
+     * Unexpected server error; internal details are never exposed
+     */
+    500: ErrorResponse;
+};
+
+export type DownloadPointCloudError = DownloadPointCloudErrors[keyof DownloadPointCloudErrors];
+
+export type DownloadPointCloudResponses = {
+    /**
+     * LAS/LAZ file downloaded
+     */
+    200: Blob | File;
+};
+
+export type DownloadPointCloudResponse = DownloadPointCloudResponses[keyof DownloadPointCloudResponses];
+
 export type ConvertPointCloudData = {
     body?: ConvertRequest;
     path: {
