@@ -186,6 +186,10 @@ Cách hoạt động: `potreeViewer.ts` là chỗ duy nhất gọi Potree. `enab
 
 Checklist thủ công cho viewer và Measure (kèm mẫu bản ghi bằng chứng) nằm ở [frontend/MANUAL_CHECKLIST.md](frontend/MANUAL_CHECKLIST.md).
 
+## Tải Point Cloud (S3-P4)
+
+Trong panel **Metadata** ở trang `/viewer/:id`, bấm **Download LAS/LAZ** để tải file gốc bằng tên file đã upload. Nút chỉ bật khi point cloud ở trạng thái `ready`; nếu tải thất bại do mạng, trạng thái hoặc lỗi trình duyệt, panel hiện thông báo lỗi thay vì báo thành công.
+
 ## Chọn vùng Crop (S3-Q1)
 
 Trang `/viewer/:id` có panel **Crop region**. Bấm **Pick region**, click hai góc đối diện của vùng trong viewer (dùng cùng cơ chế chọn điểm với Measure, nên Measure và Crop không bật cùng lúc), hoặc gõ sáu giá trị Min/Max X/Y/Z. Kết quả là `{minX, minY, minZ, maxX, maxY, maxZ}` theo **tọa độ world**, đúng schema `Bounds` trong `openapi.yaml`, hiển thị trong panel và vẽ thành hộp 3D trên viewer. Nút **Clear** xoá vùng.
