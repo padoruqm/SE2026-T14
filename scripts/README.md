@@ -21,6 +21,10 @@ cd backend
 python -m unittest discover -s tests -p test_sample_data_script.py
 ```
 
+## Demo
+
+[demo.md](demo.md) là hướng dẫn demo: chuẩn bị máy và dữ liệu, kịch bản từng bước kèm lời thoại, cách xử lý sự cố và mẫu bản ghi. Chạy `smoke-test.sh` trước mỗi buổi demo.
+
 ## Local commit hook
 
 Sau khi cài `pre-commit` theo tài liệu chính thức phù hợp với máy của bạn, chạy tại root repository:

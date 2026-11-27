@@ -33,6 +33,8 @@ Backend image có binary Linux chính thức PotreeConverter 2.1.1, được pin
 
 Compose build backend image có PotreeConverter 2.1.1 và PDAL 2.10.2. API convert gọi PotreeConverter qua job nền. Spike #14 đã xác nhận riêng converter trên Linux đọc được LAZ: container dùng Dockerfile converter đã chuyển đổi fixture `simple.laz` (1.065 điểm, SHA-256 `87ac5d2e8edb6cd3c63f1dd1b982d76b1b3c23ca634658ac6c658e1a70e73e71`) và tạo `metadata.json`. Adapter nhận cả LAS và LAZ (#32): upload LAZ convert được, đã chạy với binary thật trong image. PotreeConverter không nén output thành LAZ. Crop dùng PDAL qua API `POST /api/pointcloud/{id}/crop` (xem phần Crop API bên dưới).
 
+Hướng dẫn demo kèm lời thoại, chuẩn bị và phương án dự phòng: [scripts/demo.md](scripts/demo.md).
+
 ## Chạy backend foundation
 
 Yêu cầu Python 3.11 trở lên. Từ thư mục gốc repository:
