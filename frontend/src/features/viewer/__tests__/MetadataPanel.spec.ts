@@ -131,3 +131,27 @@ describe('MetadataPanel', () => {
     expect(urls).toEqual(['/api/pointcloud/pc_1', '/api/pointcloud/pc_2'])
   })
 })
+
+describe('a crop result', () => {
+  it('links to the point cloud it was cropped from', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { ...pointCloud(fullMetadata), id: 'pc_2', sourceId: 'pc_1' }),
+    )
+    const wrapper = mount(MetadataPanel, {
+      props: { id: 'pc_2' },
+      global: { stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('dl').text()).toContain('Cropped from')
+    expect(wrapper.get('dl a').attributes('href')).toBe('/viewer/pc_1')
+  })
+
+  it('shows no source for an upload', async () => {
+    const wrapper = await mountPanel(
+      jsonResponse(200, { ...pointCloud(fullMetadata), sourceId: null }),
+    )
+
+    expect(wrapper.text()).not.toContain('Cropped from')
+  })
+})

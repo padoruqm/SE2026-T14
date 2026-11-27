@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import {
@@ -63,6 +63,17 @@ function toggleCropPicking(): void {
 }
 
 const cropRequest = useCropRequest(() => props.id)
+
+// Opening another point cloud (such as a crop result) reuses this page, so the
+// region and measurement picked on the previous one must not carry over.
+watch(
+  () => props.id,
+  () => {
+    measure.reset()
+    crop.stopPicking()
+    crop.clear()
+  },
+)
 
 function submitCrop(format: CropOutputFormat): void {
   if (crop.bounds.value) void cropRequest.submit(crop.bounds.value, format)

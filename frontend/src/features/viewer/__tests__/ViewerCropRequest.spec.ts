@@ -23,6 +23,27 @@ const dataset = {
 
 type Reply = { status: number; body: unknown }
 
+const cropped = { minX: 500010, minY: 2000020, minZ: 100, maxX: 500040, maxY: 2000060, maxZ: 110 }
+
+const pointClouds: Record<string, unknown> = {
+  pc_1: {
+    id: 'pc_1',
+    filename: 'survey.laz',
+    status: 'ready',
+    metadata: { pointCount: 5, bounds: dataset, crs: 'EPSG:32648' },
+    viewerUrl: null,
+    sourceId: null,
+  },
+  pc_crop: {
+    id: 'pc_crop',
+    filename: 'survey-crop.laz',
+    status: 'ready',
+    metadata: { pointCount: 2, bounds: cropped, crs: 'EPSG:32648' },
+    viewerUrl: '/api/pointcloud/pc_crop/viewer/metadata.json',
+    sourceId: 'pc_1',
+  },
+}
+
 /** Answers by method and path; the crop and job replies can be queued per test. */
 function server(cropReply: Reply, jobReplies: Reply[] = []) {
   const posts: Array<{ path: string; body: unknown }> = []
@@ -40,17 +61,8 @@ function server(cropReply: Reply, jobReplies: Reply[] = []) {
     }
     if (path.startsWith('/api/job/'))
       return send(jobReplies.length > 1 ? jobReplies.shift()! : jobReplies[0]!)
-    return send({
-      status: 200,
-      body: {
-        id: 'pc_1',
-        filename: 'survey.laz',
-        status: 'ready',
-        metadata: { pointCount: 5, bounds: dataset, crs: 'EPSG:32648' },
-        viewerUrl: null,
-        sourceId: null,
-      },
-    })
+    const id = path.split('/').pop() ?? ''
+    return send({ status: 200, body: pointClouds[id] ?? pointClouds.pc_1 })
   }
   return { handler, posts }
 }
@@ -214,5 +226,53 @@ describe('sending a crop from the viewer', () => {
     const alert = page.wrapper.get('.crop-request [role="alert"]').text()
     expect(alert).toContain('not ready to crop yet')
     expect(page.wrapper.text()).not.toContain('/srv/data')
+  })
+})
+
+describe('opening the crop result', () => {
+  it('shows the result without the region or measurement of the original', async () => {
+    const api = server({ status: 202, body: job('queued') }, [
+      { status: 200, body: job('succeeded', { progress: 100, resultId: 'pc_crop' }) },
+    ])
+    const page = await mountPage(api.handler)
+    await button(page, 'Measure').trigger('click')
+    await flushPromises()
+    page.pick({ x: 500020, y: 2000030, z: 102 })
+    page.pick({ x: 500030, y: 2000040, z: 103 })
+    await flushPromises()
+    expect(page.wrapper.find('.measure-panel .measure-results').exists()).toBe(true)
+    await selectRegion(page)
+    await button(page, 'Crop point cloud').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(page.wrapper.get('.crop-request a').attributes('href')).toBe('/viewer/pc_crop')
+
+    // The link reuses this page with the result's id.
+    await page.wrapper.setProps({ id: 'pc_crop' })
+    await flushPromises()
+
+    expect(vi.mocked(mountPotreeViewer)).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.stringContaining('/api/pointcloud/pc_crop/viewer/metadata.json'),
+    )
+    expect(page.wrapper.text()).toContain('survey-crop.laz')
+    expect(page.wrapper.find('.measure-panel .measure-results').exists()).toBe(false)
+    expect(button(page, 'Measure').attributes('aria-pressed')).toBe('false')
+    for (const field of page.wrapper.findAll('.crop-fields input')) {
+      expect((field.element as HTMLInputElement).value).toBe('')
+    }
+    expect(button(page, 'Pick region').exists()).toBe(true)
+    expect(button(page, 'Crop point cloud').attributes('disabled')).toBeDefined()
+    expect(status(page)).not.toContain('Crop complete')
+  })
+
+  it('links the result back to the point cloud it was cropped from', async () => {
+    const page = await mountPage(server({ status: 202, body: job('queued') }).handler)
+
+    await page.wrapper.setProps({ id: 'pc_crop' })
+    await flushPromises()
+
+    const metadata = page.wrapper.get('.metadata-panel')
+    expect(metadata.text()).toContain('Cropped from')
+    expect(metadata.get('a').attributes('href')).toBe('/viewer/pc_1')
   })
 })

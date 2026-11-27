@@ -53,6 +53,13 @@ export function useMeasure() {
     confirmingClear.value = false
   }
 
+  /** Forget everything, for example when another point cloud is shown. */
+  function reset(): void {
+    active.value = false
+    points.value = []
+    confirmingClear.value = false
+  }
+
   return {
     active,
     points,
@@ -65,5 +72,6 @@ export function useMeasure() {
     requestClear,
     confirmClear,
     cancelClear,
+    reset,
   }
 }

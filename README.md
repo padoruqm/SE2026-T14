@@ -214,6 +214,13 @@ Sau khi chọn vùng trong panel **Crop region**, panel **Crop** gửi vùng đ�
 - Panel theo dõi job (`queued`, `running` kèm %, `succeeded`, `failed`). Khi xong có link mở point cloud mới (`resultId`); point cloud gốc không đổi.
 - Thông báo lỗi lấy theo `error.code` cố định, không hiển thị text từ server. **Try again** chỉ hiện khi thử lại có ích (lỗi mạng hoặc lỗi server), không hiện cho `409` (point cloud chưa sẵn sàng) hay `422` (vùng không hợp lệ).
 
+## Mở kết quả crop trong viewer (S3-Q3)
+
+Link **Open the cropped point cloud** mở `/viewer/<resultId>`. Kết quả là point cloud bình thường (đã convert, `status: ready`), nên viewer, Metadata, Measure, Crop và Download dùng được như với file upload, kể cả crop tiếp.
+
+- Vue Router dùng lại cùng trang viewer khi chỉ đổi `id`, nên khi đổi point cloud trang xoá vùng crop, các góc đang chọn và phép đo của point cloud trước; nếu không, hộp crop cũ sẽ được vẽ và gửi đi trên kết quả.
+- Panel **Metadata** của kết quả có dòng **Cropped from** với link về point cloud gốc (`sourceId`); file upload không có dòng này.
+
 ## API contract và mock
 
 `openapi/openapi.yaml` là nguồn sự thật cho API (upload, metadata, convert, job và schema lỗi dùng chung). Mock server và client TypeScript đều được sinh từ file này. Từ thư mục `frontend/`:
