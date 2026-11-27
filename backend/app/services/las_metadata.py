@@ -4,6 +4,7 @@ import math
 import re
 import struct
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from app.core.errors import InvalidPointCloudError
 
@@ -21,9 +22,24 @@ _GEOTIFF_KEY_DIRECTORY_RECORD_ID = 34735
 _GEOGRAPHIC_TYPE_KEY = 2048
 _PROJECTED_CS_TYPE_KEY = 3072
 _USER_DEFINED = 32767
-_WKT_EPSG_AT_END = re.compile(
-    r'(?:AUTHORITY\["EPSG",\s*"(\d+)"\]|ID\["EPSG",\s*(\d+)\])[\]\s]*$'
+_HORIZONTAL_CRS = frozenset(
+    {
+        "PROJCS",
+        "GEOGCS",
+        "GEOCCS",
+        "PROJCRS",
+        "PROJECTEDCRS",
+        "GEOGCRS",
+        "GEOGRAPHICCRS",
+        "GEODCRS",
+        "GEODETICCRS",
+    }
 )
+_COMPOUND_CRS = frozenset({"COMPD_CS", "COMPOUNDCRS"})
+_IDENTIFIERS = frozenset({"AUTHORITY", "ID"})
+_WKT_KEYWORD = re.compile(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*([\[(])")
+_WKT_VALUE = re.compile(r"\s*([^,\[\]()\s\"]+)")
+_WKT_CLOSE = {"[": "]", "(": ")"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,8 +154,99 @@ def _epsg_from_geotiff_keys(data: bytes) -> str | None:
 
 
 def _epsg_from_wkt(data: bytes) -> str | None:
-    wkt = data.decode("utf-8", "ignore").rstrip("\0 \r\n\t")
-    match = _WKT_EPSG_AT_END.search(wkt)
-    if not match:
+    """The EPSG code of the horizontal CRS described by WKT 1 or 2, or None.
+
+    Only a code attached to the CRS node itself counts. The last AUTHORITY in
+    the text can belong to a unit (EPSG:9002 is the foot) or to the vertical
+    part of a compound CRS, so it is not used. For a compound CRS the
+    horizontal part is reported.
+    """
+    crs = _parse_wkt(data.decode("utf-8", "ignore").rstrip("\0 \r\n\t"))
+    if crs is None:
         return None
-    return f"EPSG:{match.group(1) or match.group(2)}"
+    if crs.keyword in _COMPOUND_CRS:
+        for part in crs.args:
+            if isinstance(part, _WktNode) and part.keyword in _HORIZONTAL_CRS:
+                return _own_epsg(part)
+        return None
+    return _own_epsg(crs) if crs.keyword in _HORIZONTAL_CRS else None
+
+
+class _WktNode(NamedTuple):
+    keyword: str
+    args: list[str | _WktNode]
+
+
+def _own_epsg(crs: _WktNode) -> str | None:
+    for arg in crs.args:
+        if isinstance(arg, _WktNode) and arg.keyword in _IDENTIFIERS:
+            authority, code = (arg.args + ["", ""])[:2]
+            if authority == "EPSG" and isinstance(code, str) and code.isdigit():
+                return f"EPSG:{code}"
+    return None
+
+
+def _parse_wkt(text: str) -> _WktNode | None:
+    try:
+        node, end = _parse_wkt_node(text, 0, depth=0)
+    except ValueError:
+        return None
+    return node if not text[end:].strip() else None
+
+
+def _parse_wkt_node(text: str, pos: int, depth: int) -> tuple[_WktNode, int]:
+    """Parse `KEYWORD[arg, ...]` at `pos`; arguments are strings, values or nodes."""
+    if depth > 32:
+        raise ValueError("WKT nested too deeply")
+    match = _WKT_KEYWORD.match(text, pos)
+    if not match:
+        raise ValueError("expected a WKT keyword")
+    close = _WKT_CLOSE[match.group(2)]
+    args: list[str | _WktNode] = []
+    pos = match.end()
+    while True:
+        pos = _skip_space(text, pos)
+        if pos >= len(text):
+            raise ValueError("unterminated WKT node")
+        if text[pos] == close and not args:
+            return _WktNode(match.group(1).upper(), args), pos + 1
+        value: str | _WktNode
+        if text[pos] == '"':
+            value, pos = _parse_wkt_string(text, pos)
+        elif _WKT_KEYWORD.match(text, pos):
+            value, pos = _parse_wkt_node(text, pos, depth + 1)
+        else:
+            bare = _WKT_VALUE.match(text, pos)
+            if not bare:
+                raise ValueError("expected a WKT value")
+            value, pos = bare.group(1), bare.end()
+        args.append(value)
+        pos = _skip_space(text, pos)
+        if pos < len(text) and text[pos] == ",":
+            pos += 1
+        elif pos < len(text) and text[pos] == close:
+            return _WktNode(match.group(1).upper(), args), pos + 1
+        else:
+            raise ValueError("expected ',' or a closing bracket")
+
+
+def _parse_wkt_string(text: str, pos: int) -> tuple[str, int]:
+    """A quoted string starting at `pos`; WKT escapes a quote by doubling it."""
+    chars: list[str] = []
+    pos += 1
+    while pos < len(text):
+        if text[pos] == '"':
+            if text.startswith('""', pos):
+                chars.append('"')
+                pos += 2
+                continue
+            return "".join(chars), pos + 1
+        chars.append(text[pos])
+        pos += 1
+    raise ValueError("unterminated WKT string")
+
+
+def _skip_space(text: str, pos: int) -> int:
+    while pos < len(text) and text[pos].isspace():
+        pos += 1
+    return pos

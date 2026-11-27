@@ -10,6 +10,7 @@ from app.services.las_metadata import (
     required_head_length,
 )
 from las_fixtures import Vlr, build_las, geotiff_key_directory
+from wkt_fixtures import AUTZEN_CLASSIFIED_WKT, AUTZEN_TRIM_WKT
 
 PROJECTION = "LASF_Projection"
 
@@ -96,6 +97,80 @@ class ParseLasMetadataTest(unittest.TestCase):
 
         with self.assertRaises(InvalidPointCloudError):
             parse_las_metadata(las)
+
+
+def _crs_of(wkt: str) -> str | None:
+    las = build_las(vlrs=(Vlr(PROJECTION, 2112, wkt.encode() + b"\0"),))
+    return parse_las_metadata(las).crs
+
+
+class CrsFromWktTest(unittest.TestCase):
+    """Only a code that belongs to the coordinate system itself counts."""
+
+    def test_reads_the_projected_crs_code(self) -> None:
+        wkt = (
+            'PROJCS["WGS 84 / UTM zone 48N",GEOGCS["WGS 84",DATUM["WGS_1984",'
+            'SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
+            'AUTHORITY["EPSG","6326"]],AUTHORITY["EPSG","4326"]],'
+            'UNIT["metre",1,AUTHORITY["EPSG","9001"]],AUTHORITY["EPSG","32648"]]'
+        )
+        self.assertEqual("EPSG:32648", _crs_of(wkt))
+
+    def test_reads_a_geographic_crs_code(self) -> None:
+        wkt = (
+            'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],'
+            'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
+            'AUTHORITY["EPSG","4326"]]'
+        )
+        self.assertEqual("EPSG:4326", _crs_of(wkt))
+
+    def test_a_user_defined_projection_has_no_code(self) -> None:
+        # Its last AUTHORITY is the foot unit (EPSG:9002), which is not a CRS.
+        self.assertIsNone(_crs_of(AUTZEN_TRIM_WKT))
+
+    def test_a_compound_crs_reports_its_horizontal_part(self) -> None:
+        # The compound has no code; the vertical part (EPSG:6360) comes last.
+        self.assertEqual("EPSG:2992", _crs_of(AUTZEN_CLASSIFIED_WKT))
+
+    def test_a_compound_crs_with_its_own_code_still_reports_the_horizontal_part(
+        self,
+    ) -> None:
+        wkt = (
+            'COMPD_CS["WGS 84 / UTM 48N + EGM96 height",'
+            'PROJCS["WGS 84 / UTM zone 48N",UNIT["metre",1],AUTHORITY["EPSG","32648"]],'
+            'VERT_CS["EGM96 height",UNIT["metre",1],AUTHORITY["EPSG","5773"]],'
+            'AUTHORITY["EPSG","9705"]]'
+        )
+        self.assertEqual("EPSG:32648", _crs_of(wkt))
+
+    def test_reads_wkt2_identifiers(self) -> None:
+        wkt = (
+            'PROJCRS["WGS 84 / UTM zone 48N",BASEGEOGCRS["WGS 84",'
+            'DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563]],'
+            'ID["EPSG",4326]],CONVERSION["UTM zone 48N",ID["EPSG",16048]],'
+            'CS[Cartesian,2],LENGTHUNIT["metre",1,ID["EPSG",9001]],ID["EPSG",32648]]'
+        )
+        self.assertEqual("EPSG:32648", _crs_of(wkt))
+
+    def test_a_wkt2_compound_reports_its_horizontal_part(self) -> None:
+        wkt = (
+            'COMPOUNDCRS["x",PROJCRS["h",LENGTHUNIT["metre",1],ID["EPSG",32648]],'
+            'VERTCRS["v",LENGTHUNIT["metre",1],ID["EPSG",5773]]]'
+        )
+        self.assertEqual("EPSG:32648", _crs_of(wkt))
+
+    def test_brackets_inside_names_do_not_confuse_it(self) -> None:
+        # WKT escapes a quote by doubling it.
+        wkt = (
+            'PROJCS["a ""quoted"" [name], AUTHORITY[""EPSG"",""1""]",'
+            'AUTHORITY["EPSG","32648"]]'
+        )
+        self.assertEqual("EPSG:32648", _crs_of(wkt))
+
+    def test_malformed_wkt_has_no_code(self) -> None:
+        for wkt in ("", "not wkt", 'PROJCS["unterminated",AUTHORITY["EPSG","32648"]', "[]"):
+            with self.subTest(wkt=wkt):
+                self.assertIsNone(_crs_of(wkt))
 
 
 class RequiredHeadLengthTest(unittest.TestCase):
