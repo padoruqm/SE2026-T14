@@ -89,7 +89,7 @@ export type JobError = {
     message: string;
 };
 
-export type ErrorCode = 'BAD_REQUEST' | 'VALIDATION_ERROR' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_FILE_TYPE' | 'INVALID_POINT_CLOUD' | 'NOT_FOUND' | 'GONE' | 'METHOD_NOT_ALLOWED' | 'CONFLICT' | 'INTERNAL_ERROR';
+export type ErrorCode = 'BAD_REQUEST' | 'VALIDATION_ERROR' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_FILE_TYPE' | 'INVALID_POINT_CLOUD' | 'NOT_FOUND' | 'GONE' | 'METHOD_NOT_ALLOWED' | 'CONFLICT' | 'EMPTY_RESULT' | 'INTERNAL_ERROR';
 
 export type ErrorResponse = {
     error: {
@@ -252,6 +252,12 @@ export type CropPointCloudErrors = {
      * The resource is not in a state that allows this request
      */
     409: ErrorResponse;
+    /**
+     * The resource existed but its data is no longer available, for example a
+     * result that was removed. A resource that never existed is `NotFound`.
+     *
+     */
+    410: ErrorResponse;
     /**
      * The request or the point cloud data is invalid
      */

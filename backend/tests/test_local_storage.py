@@ -291,5 +291,65 @@ class ConvertedFileTest(unittest.TestCase):
                 self.assertIsNone(storage.converted_file("pc_1", path))
 
 
+class StoreFileTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name)
+        self.storage = LocalDatasetStorage(self.root, MAX_UPLOAD_BYTES)
+        self.work = self.root / "work"
+        self.work.mkdir()
+
+    def tearDown(self) -> None:
+        self.temporary_directory.cleanup()
+
+    def _file(self, name: str, content: bytes = b"LASF data") -> Path:
+        path = self.work / name
+        path.write_bytes(content)
+        return path
+
+    def test_moves_the_file_under_the_dataset_id_and_keeps_its_extension(self) -> None:
+        source = self._file("cropped.LAZ")
+
+        stored = self.storage.store_file("pc_1", source)
+
+        self.assertEqual(self.root / "uploads" / "pc_1.laz", stored)
+        self.assertEqual(b"LASF data", stored.read_bytes())
+        self.assertFalse(source.exists())
+        self.assertEqual(stored, self.storage.find("pc_1"))
+
+    def test_refuses_unsafe_ids_and_extensions(self) -> None:
+        for dataset_id, name in (
+            ("../escape", "a.las"),
+            ("bad.id", "a.las"),
+            ("pc_1", "noextension"),
+            ("pc_1", "a.part"),
+        ):
+            with self.subTest(dataset_id=dataset_id, name=name):
+                source = self._file(name)
+                with self.assertRaises(InvalidStorageKeyError):
+                    self.storage.store_file(dataset_id, source)
+                self.assertTrue(source.exists())
+
+    def test_never_replaces_an_existing_file(self) -> None:
+        self.storage.store_file("pc_1", self._file("first.las", b"first"))
+
+        with self.assertRaises(InvalidStorageKeyError):
+            self.storage.store_file("pc_1", self._file("second.las", b"second"))
+
+        self.assertEqual(b"first", (self.root / "uploads" / "pc_1.las").read_bytes())
+
+    def test_refuses_a_missing_or_symlinked_source(self) -> None:
+        target = self._file("real.las")
+        link = self.work / "link.las"
+        link.symlink_to(target)
+
+        for source in (self.work / "missing.las", link):
+            with self.subTest(source=source.name):
+                with self.assertRaises(InvalidStorageKeyError):
+                    self.storage.store_file("pc_1", source)
+
+        self.assertIsNone(self.storage.find("pc_1"))
+
+
 if __name__ == "__main__":
     unittest.main()

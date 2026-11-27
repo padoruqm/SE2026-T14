@@ -165,6 +165,23 @@ describe('useCropRequest', () => {
     expect(crop.resultId.value).toBeNull()
   })
 
+  it('says when the region held no points', async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(202, job('running')))
+      .mockResolvedValueOnce(
+        json(200, job('failed', { error: { code: 'EMPTY_RESULT', message: 'x' } })),
+      )
+    const { crop } = setup()
+
+    const done = crop.submit(BOUNDS, 'laz')
+    await vi.advanceTimersByTimeAsync(1000)
+    await done
+
+    expect(crop.error.value).toBe(
+      'The selected region contains no points. Choose a different region.',
+    )
+  })
+
   it('uses a general message for a job failure it does not know', async () => {
     fetchMock
       .mockResolvedValueOnce(json(202, job('running')))

@@ -69,6 +69,18 @@ class GoneError(AppError):
     message = "The requested resource existed but is no longer available"
 
 
+class InvalidRequestError(AppError):
+    """A request that is well formed but not acceptable, in the same shape as
+    FastAPI's validation errors: `details.fields` lists where and why."""
+
+    status_code = 422
+    code = "VALIDATION_ERROR"
+    message = "The request is invalid"
+
+    def __init__(self, location: list[str], reason: str) -> None:
+        super().__init__(details={"fields": [{"location": location, "reason": reason}]})
+
+
 class ConflictError(AppError):
     status_code = 409
     code = "CONFLICT"

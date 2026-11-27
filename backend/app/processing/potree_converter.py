@@ -143,9 +143,10 @@ class PotreeConverterProcessor(Processor):
             raise ProcessingInputError("Potree conversion does not accept parameters")
 
         input_path = context.input_path.resolve()
-        if input_path.suffix.lower() != ".las":
+        # PotreeConverter reads LAZ as well as LAS (verified in spike #14).
+        if input_path.suffix.lower() not in {".las", ".laz"}:
             raise ProcessingInputError(
-                "Potree conversion currently accepts LAS files only"
+                "Potree conversion accepts LAS and LAZ files only"
             )
         if not input_path.is_file():
             raise ProcessingInputError("The input point cloud does not exist")

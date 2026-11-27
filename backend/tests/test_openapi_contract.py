@@ -90,6 +90,29 @@ class OpenApiContractTest(unittest.TestCase):
 
         self.assertEqual(contract, implemented)
 
+    def test_crop_route_matches_the_contract(self) -> None:
+        contract = self.spec["paths"]["/api/pointcloud/{id}/crop"]["post"]["responses"]
+        implemented = self.implemented["paths"]["/api/pointcloud/{point_cloud_id}/crop"][
+            "post"
+        ]["responses"]
+
+        for status in ("202", "404", "409", "410", "422"):
+            self.assertIn(status, contract)
+            self.assertIn(status, implemented)
+
+    def test_crop_request_has_the_contract_fields(self) -> None:
+        schemas = self.spec["components"]["schemas"]
+        implemented = self.implemented["components"]["schemas"]
+
+        self.assertEqual(
+            _properties(schemas["CropRequest"]), _properties(implemented["CropRequest"])
+        )
+        self.assertEqual(_properties(schemas["Bounds"]), _properties(implemented["CropBounds"]))
+        self.assertEqual(
+            schemas["CropRequest"]["properties"]["outputFormat"]["enum"],
+            implemented["CropRequest"]["properties"]["outputFormat"]["enum"],
+        )
+
     def test_job_response_has_the_contract_fields(self) -> None:
         contract = self.spec["components"]["schemas"]["Job"]
         implemented = self.implemented["components"]["schemas"]["JobResponse"]

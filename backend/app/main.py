@@ -7,14 +7,17 @@ from app.api.jobs import router as jobs_router
 from app.api.viewer import router as viewer_router
 from app.core.config import Settings
 from app.core.errors import register_error_handlers
+from app.jobs.crop import CropJobRunner
 from app.jobs.runner import ConvertJobRunner
 from app.jobs.store import JobStore
-from app.processing import PotreeConverterProcessor, Processor
+from app.processing import PdalCropProcessor, PotreeConverterProcessor, Processor
 from app.storage.local import LocalDatasetStorage
 
 
 def create_app(
-    settings: Settings | None = None, processor: Processor | None = None
+    settings: Settings | None = None,
+    processor: Processor | None = None,
+    crop_processor: Processor | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_environment()
     app = FastAPI(title="Point Cloud Explorer API", version="0.1.0")
@@ -23,13 +26,24 @@ def create_app(
         max_upload_bytes=resolved_settings.max_upload_bytes,
     )
     app.state.job_store = JobStore()
+    converter = processor or PotreeConverterProcessor(
+        executable=resolved_settings.potree_converter_path,
+        timeout_seconds=resolved_settings.conversion_timeout_seconds,
+    )
     app.state.jobs = ConvertJobRunner(
         storage=app.state.storage,
-        processor=processor
-        or PotreeConverterProcessor(
-            executable=resolved_settings.potree_converter_path,
-            timeout_seconds=resolved_settings.conversion_timeout_seconds,
+        processor=converter,
+        store=app.state.job_store,
+        workers=resolved_settings.job_workers,
+    )
+    # A crop result is converted for the viewer with the same converter.
+    app.state.crops = CropJobRunner(
+        storage=app.state.storage,
+        crop_processor=crop_processor
+        or PdalCropProcessor(
+            timeout_seconds=resolved_settings.conversion_timeout_seconds
         ),
+        convert_processor=converter,
         store=app.state.job_store,
         workers=resolved_settings.job_workers,
     )

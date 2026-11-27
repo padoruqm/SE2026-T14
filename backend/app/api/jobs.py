@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.errors import ErrorResponse, NotFoundError
 from app.jobs.store import Job, JobState
@@ -13,6 +13,26 @@ router = APIRouter(prefix="/api")
 
 class ConvertRequest(BaseModel):
     force: bool = False
+
+
+class CropBounds(BaseModel):
+    # Strict: booleans and numeric strings are not numbers, and NaN/Infinity
+    # (which Python's JSON parser accepts) are rejected.
+    model_config = ConfigDict(strict=True, allow_inf_nan=False, extra="forbid")
+
+    minX: float
+    minY: float
+    minZ: float
+    maxX: float
+    maxY: float
+    maxZ: float
+
+
+class CropRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bounds: CropBounds
+    outputFormat: Literal["las", "laz"] = "laz"
 
 
 class JobErrorResponse(BaseModel):
@@ -48,6 +68,12 @@ _CONVERT_ERRORS: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Point cloud not found"},
     409: {"model": ErrorResponse, "description": "Already converted or converting"},
 }
+_CROP_ERRORS: dict[int | str, dict[str, Any]] = {
+    404: {"model": ErrorResponse, "description": "Point cloud not found"},
+    409: {"model": ErrorResponse, "description": "Point cloud has no file to crop"},
+    410: {"model": ErrorResponse, "description": "Point cloud is no longer available"},
+    422: {"model": ErrorResponse, "description": "Invalid bounds or output format"},
+}
 _JOB_ERRORS: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Job not found"},
 }
@@ -65,6 +91,21 @@ async def convert_point_cloud(
     body: ConvertRequest | None = None,
 ) -> JobResponse:
     job = request.app.state.jobs.start(point_cloud_id, force=body.force if body else False)
+    return JobResponse.from_job(job)
+
+
+@router.post(
+    "/pointcloud/{point_cloud_id}/crop",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=_CROP_ERRORS,
+)
+async def crop_point_cloud(
+    point_cloud_id: str, body: CropRequest, request: Request
+) -> JobResponse:
+    job = request.app.state.crops.start(
+        point_cloud_id, body.bounds.model_dump(), body.outputFormat
+    )
     return JobResponse.from_job(job)
 
 

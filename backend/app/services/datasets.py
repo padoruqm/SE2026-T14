@@ -133,12 +133,14 @@ class DatasetService:
         filename: str,
         metadata: LasMetadata,
         converted: Path,
+        source_file: Path | None = None,
     ) -> StoredDataset:
         """Register a dataset derived from `source_id` (for example a crop).
 
-        `converted` is the viewer-ready output; it is moved into storage. The result
-        gets its own ID and is stored like an upload, with `source_id` recording where
-        it came from.
+        `converted` is the viewer-ready output and `source_file` the point cloud file
+        itself (LAS/LAZ); both are moved into storage, so the result can be viewed,
+        downloaded and processed like an upload. The result gets its own ID, with
+        `source_id` recording where it came from. If anything fails, nothing is kept.
         """
         self.get(source_id)
 
@@ -146,11 +148,14 @@ class DatasetService:
         safe_filename = sanitize_filename(filename)
         self._storage.publish_converted(dataset_id, converted)
         try:
+            if source_file is not None:
+                self._storage.store_file(dataset_id, source_file)
             self._storage.write_record(
                 dataset_id, _to_record(safe_filename, metadata, source_id)
             )
         except BaseException:
             self._storage.discard_converted(dataset_id)
+            self._storage.discard_upload(dataset_id)
             raise
         return StoredDataset(
             id=dataset_id,

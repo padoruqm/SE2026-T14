@@ -174,6 +174,48 @@ class ResultDatasetTest(unittest.TestCase):
 
         self.assertEqual([source_id], [p.name for p in (self.root / "converted").glob("pc_*")])
 
+    def _cropped_file(self, name: str = "cropped.laz") -> Path:
+        work = self.root / "work"
+        work.mkdir(exist_ok=True)
+        path = work / name
+        path.write_bytes(build_las())
+        return path
+
+    def test_a_result_keeps_its_point_cloud_file(self) -> None:
+        source_id = self._converted_source()
+        staging = self.storage.new_staging_dir("crop")
+        (staging / "metadata.json").write_text('{"version": "2.0"}', encoding="utf-8")
+        cropped = self._cropped_file()
+
+        result = self.service.create_result(
+            source_id, "survey-crop.laz", CROPPED, staging, source_file=cropped
+        )
+
+        stored = self.storage.find(result.id)
+        self.assertEqual(f"{result.id}.laz", stored.name)
+        self.assertFalse(cropped.exists())
+        self.assertEqual("ready", self.service.get(result.id).status)
+
+    def test_a_failed_record_write_leaves_neither_files_nor_point_cloud_behind(self) -> None:
+        source_id = self._converted_source()
+        staging = self.storage.new_staging_dir("crop")
+        (staging / "metadata.json").write_text("{}", encoding="utf-8")
+        before = sorted(p.name for p in (self.root / "uploads").iterdir())
+
+        with mock.patch.object(self.storage, "write_record", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                self.service.create_result(
+                    source_id,
+                    "crop.laz",
+                    CROPPED,
+                    staging,
+                    source_file=self._cropped_file(),
+                )
+
+        self.assertEqual(before, sorted(p.name for p in (self.root / "uploads").iterdir()))
+        converted = [p.name for p in (self.root / "converted").iterdir()]
+        self.assertEqual([source_id], [n for n in converted if not n.startswith(".")])
+
     def test_discard_converted_ignores_unknown_and_invalid_ids(self) -> None:
         self.storage.discard_converted("pc_unknown")
         self.storage.discard_converted("../metadata")
