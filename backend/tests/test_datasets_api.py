@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import shutil
+import struct
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +16,47 @@ from las_fixtures import Vlr, build_las, geotiff_key_directory
 
 LAS_BYTES = build_las(point_count=2, min_xyz=(1.0, 2.0, 0.0), max_xyz=(3.0, 4.0, 5.0))
 MAX_UPLOAD_BYTES = 4096
+EXPORT_EXPECTED_BOUNDS = {
+    "minX": 500_001.25,
+    "minY": 2_000_002.5,
+    "minZ": 100.75,
+    "maxX": 500_004.25,
+    "maxY": 2_000_006.5,
+    "maxZ": 112.75,
+}
+
+
+def _export_fixture_las() -> bytes:
+    points = ((125, 250, 75), (425, 650, 1275))
+    payload = b"".join(
+        struct.pack("<iiiHBBbBHd", x, y, z, 100, 0x09, 2, 0, 0, 0, 0.0)
+        for x, y, z in points
+    )
+    return build_las(
+        point_count=len(points),
+        scale=(0.01, 0.01, 0.01),
+        offset=(500_000.0, 2_000_000.0, 100.0),
+        min_xyz=(
+            EXPORT_EXPECTED_BOUNDS["minX"],
+            EXPORT_EXPECTED_BOUNDS["minY"],
+            EXPORT_EXPECTED_BOUNDS["minZ"],
+        ),
+        max_xyz=(
+            EXPORT_EXPECTED_BOUNDS["maxX"],
+            EXPORT_EXPECTED_BOUNDS["maxY"],
+            EXPORT_EXPECTED_BOUNDS["maxZ"],
+        ),
+        vlrs=(
+            Vlr(
+                "LASF_Projection",
+                34735,
+                geotiff_key_directory(
+                    (1024, 1), (1025, 1), (2048, 4326), (3072, 32648)
+                ),
+            ),
+        ),
+        payload=payload,
+    )
 
 
 class UploadApiTest(unittest.TestCase):
@@ -108,6 +153,81 @@ class UploadApiTest(unittest.TestCase):
                     response.headers["content-disposition"],
                 )
                 self.assertEqual(LAS_BYTES, response.content)
+
+    def test_downloaded_las_and_laz_are_readable_by_pdal_and_match_metadata(
+        self,
+    ) -> None:
+        pdal_executable = shutil.which("pdal")
+        if pdal_executable is None:
+            self.skipTest("PDAL CLI is not available on PATH")
+
+        root = Path(self.temporary_directory.name)
+        source_las = root / "export-fixture.las"
+        source_las.write_bytes(_export_fixture_las())
+        source_files = {"survey.las": source_las}
+
+        source_laz = root / "export-fixture.laz"
+        translate = subprocess.run(
+            [pdal_executable, "pipeline", "--stdin"],
+            input=json.dumps(
+                {
+                    "pipeline": [
+                        {"type": "readers.las", "filename": str(source_las)},
+                        {
+                            "type": "writers.las",
+                            "filename": str(source_laz),
+                            "compression": True,
+                            "forward": "all",
+                        },
+                    ]
+                }
+            ),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(0, translate.returncode, translate.stdout + translate.stderr)
+        source_files["survey.laz"] = source_laz
+
+        for filename, source_path in source_files.items():
+            with self.subTest(filename=filename):
+                upload = self._upload(filename, source_path.read_bytes())
+                point_cloud_id = upload.json()["id"]
+                self.assertEqual(
+                    {
+                        "pointCount": 2,
+                        "bounds": EXPORT_EXPECTED_BOUNDS,
+                        "crs": "EPSG:32648",
+                    },
+                    upload.json()["metadata"],
+                )
+                (self.converted_root / point_cloud_id).mkdir(parents=True)
+
+                response = self.client.get(
+                    f"/api/pointcloud/{point_cloud_id}/download"
+                )
+
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(source_path.read_bytes(), response.content)
+                downloaded_path = root / f"downloaded-{filename}"
+                downloaded_path.write_bytes(response.content)
+                info = subprocess.run(
+                    [pdal_executable, "info", "--summary", str(downloaded_path)],
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(0, info.returncode, info.stdout + info.stderr)
+                summary = json.loads(info.stdout)["summary"]
+                self.assertEqual(2, summary["num_points"])
+                for axis in "XYZ":
+                    with self.subTest(filename=filename, axis=axis):
+                        self.assertEqual(
+                            EXPORT_EXPECTED_BOUNDS[f"min{axis}"],
+                            summary["bounds"][axis]["min"],
+                        )
+                        self.assertEqual(
+                            EXPORT_EXPECTED_BOUNDS[f"max{axis}"],
+                            summary["bounds"][axis]["max"],
+                        )
 
     def test_download_of_a_point_cloud_that_is_not_ready_returns_conflict(self) -> None:
         upload = self._upload("survey.las", LAS_BYTES)

@@ -74,6 +74,15 @@ Sau khi upload, gọi `POST /api/pointcloud/{id}/convert` để tạo job conver
 
 `GET /api/pointcloud/{id}/download` stream file LAS/LAZ với tên gốc trong `Content-Disposition` và `application/octet-stream`; chỉ point cloud `ready` mới tải được. Trả `409 CONFLICT` nếu chưa sẵn sàng, `404 NOT_FOUND` nếu không tồn tại và `410 GONE` nếu file đã mất.
 
+**Kiểm chứng file tải xuống bằng PDAL (#39).** Backend test `test_downloaded_las_and_laz_are_readable_by_pdal_and_match_metadata` dùng fixture LAS nhỏ có hai điểm, scale `(0.01, 0.01, 0.01)`, offset `(500000, 2000000, 100)` và GeoTIFF CRS `EPSG:32648` (đơn vị mét). Fixture khai báo tọa độ nguyên `(125, 250, 75)` và `(425, 650, 1275)`, tương ứng bounds XYZ `(500001.25, 2000002.5, 100.75)` đến `(500004.25, 2000006.5, 112.75)`. Test tạo LAZ tạm bằng PDAL, tải cả LAS/LAZ qua API, rồi đọc chính bytes tải xuống bằng `pdal info --summary`; so sánh point count và đủ sáu bounds với fixture cùng metadata upload. Không dùng tolerance: các bounds kỳ vọng là giá trị biểu diễn chính xác được sau scale/offset; nếu đổi scale/offset hoặc fixture, cần cập nhật giá trị xuất phát từ các điểm nguyên. File test được tạo trong thư mục tạm, không commit dữ liệu point-cloud. Khi PDAL CLI không có trong `PATH`, test này được skip.
+
+Chạy kiểm chứng (PDAL CLI phải có trong `PATH`):
+
+```bash
+cd backend
+python -m unittest discover -s tests -p test_datasets_api.py -v
+```
+
 Converter là PotreeConverter chạy qua `PotreeConverterProcessor`; mặc định dùng `POTREE_CONVERTER_PATH` (đã đặt trong image), có thể ghi đè bằng `APP_POTREE_CONVERTER_PATH`; dùng `APP_JOB_TIMEOUT_SECONDS` (mặc định 600) và `APP_JOB_WORKERS` (mặc định 1) để chỉnh timeout và số job chạy song song. `PdalCropProcessor` dùng `APP_PDAL_PATH` (trong image trỏ tới wrapper cấu hình thư viện PDAL). Lỗi của chính converter (crash, timeout, thiếu binary) kết thúc job `failed` với `INTERNAL_ERROR`; file đầu vào bị từ chối kết thúc với `INVALID_POINT_CLOUD`.
 
 **Dataset kết quả (S3-Q2).** Kết quả của một job dẫn xuất (ví dụ crop) là dataset riêng: có ID `pc_…` mới, có bản ghi metadata riêng, và `sourceId` trỏ về dataset gốc (dataset upload có `sourceId: null`). `DatasetService.create_result(source_id, filename, metadata, converted)` tạo nó từ thư mục viewer-ready; ID mới được cấp ở đây, nên job crop chỉ cần trả ID này làm `resultId`. Lỗi khi truy cập:
