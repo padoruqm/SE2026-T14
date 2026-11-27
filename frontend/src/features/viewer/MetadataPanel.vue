@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import DownloadPanel from './DownloadPanel.vue'
 import { boundsRows, formatPointCount } from './formatMetadata'
 import { usePointCloudMetadata } from './usePointCloudMetadata'
 
@@ -68,6 +69,13 @@ const rows = computed(() => (metadata.value?.bounds ? boundsRows(metadata.value.
       </table>
       <p v-else>Bounds: Not available</p>
     </template>
+
+    <DownloadPanel
+      v-if="pointCloud"
+      :id="id"
+      :filename="pointCloud.filename"
+      :ready="pointCloud.status === 'ready'"
+    />
   </section>
 </template>
 
