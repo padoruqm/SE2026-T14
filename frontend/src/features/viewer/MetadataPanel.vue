@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 
 import { boundsRows, formatPointCount } from './formatMetadata'
 import { usePointCloudMetadata } from './usePointCloudMetadata'
@@ -35,6 +36,14 @@ const rows = computed(() => (metadata.value?.bounds ? boundsRows(metadata.value.
       <dl class="metadata-summary">
         <dt>File</dt>
         <dd>{{ pointCloud.filename }}</dd>
+        <template v-if="pointCloud.sourceId">
+          <dt>Cropped from</dt>
+          <dd>
+            <RouterLink :to="`/viewer/${pointCloud.sourceId}`">{{
+              pointCloud.sourceId
+            }}</RouterLink>
+          </dd>
+        </template>
         <dt>Points</dt>
         <dd>
           {{

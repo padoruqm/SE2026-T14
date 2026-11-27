@@ -168,3 +168,19 @@ describe('clearing', () => {
     expect(measure.points.value).toEqual([a])
   })
 })
+
+describe('reset', () => {
+  it('forgets the points, the pending question and switches the tool off', () => {
+    const measure = started()
+    measure.addPoint(a)
+    measure.addPoint(b)
+    measure.requestClear()
+
+    measure.reset()
+
+    expect(measure.active.value).toBe(false)
+    expect(measure.points.value).toEqual([])
+    expect(measure.measurement.value).toBeNull()
+    expect(measure.confirmingClear.value).toBe(false)
+  })
+})
