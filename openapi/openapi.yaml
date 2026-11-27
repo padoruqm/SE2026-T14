@@ -112,6 +112,51 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/pointcloud/{id}/download:
+    get:
+      tags: [pointcloud]
+      operationId: downloadPointCloud
+      summary: Download a ready point cloud as LAS/LAZ
+      description: |
+        Streams the stored LAS/LAZ source file with its recorded filename.
+        Downloads are available only when the point cloud status is `ready`.
+      parameters:
+        - $ref: "#/components/parameters/PointCloudId"
+      responses:
+        "200":
+          description: LAS/LAZ file downloaded
+          headers:
+            Content-Disposition:
+              description: Attachment filename from the point-cloud record
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Point cloud is not ready for download
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: CONFLICT
+                  message: Point cloud is not ready for download
+                  requestId: req_4c1d9e
+                  details: {}
+        "410":
+          $ref: "#/components/responses/Gone"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/pointcloud/{id}/convert:
     post:
       tags: [pointcloud]
